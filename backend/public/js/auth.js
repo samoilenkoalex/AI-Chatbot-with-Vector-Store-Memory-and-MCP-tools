@@ -12,6 +12,8 @@ const tabBtns = document.querySelectorAll('.tab-btn');
 const notification = document.getElementById('notification');
 const loginError = document.getElementById('loginError');
 const registerError = document.getElementById('registerError');
+const loginSuccess = document.getElementById('loginSuccess');
+const registerSuccess = document.getElementById('registerSuccess');
 
 // Event Listeners
 loginForm.addEventListener('submit', handleLogin);
@@ -27,9 +29,11 @@ checkAuthStatus();
 // Form Handling Functions
 async function handleLogin(e) {
     e.preventDefault();
-    // Clear previous error
+    // Clear previous messages
     loginError.textContent = '';
     loginError.classList.add('hidden');
+    loginSuccess.textContent = '';
+    loginSuccess.classList.add('hidden');
 
     const formData = new FormData(loginForm);
     const data = {
@@ -73,8 +77,11 @@ async function handleLogin(e) {
         }
 
         localStorage.setItem('token', result.token);
-        showNotification('Login successful!', 'success');
-        window.location.href = '/main';
+        loginSuccess.textContent = 'Login successful!';
+        loginSuccess.classList.remove('hidden');
+        setTimeout(() => {
+            window.location.href = '/main';
+        }, 1000);
         loginForm.reset();
     } catch (error) {
         // Show error in the form
@@ -88,9 +95,11 @@ async function handleLogin(e) {
 
 async function handleRegister(e) {
     e.preventDefault();
-    // Clear previous error
+    // Clear previous messages
     registerError.textContent = '';
     registerError.classList.add('hidden');
+    registerSuccess.textContent = '';
+    registerSuccess.classList.add('hidden');
 
     const formData = new FormData(registerForm);
     const data = {
@@ -132,9 +141,14 @@ async function handleRegister(e) {
             }
         }
 
-        showNotification('Registration successful! Please login.', 'success');
-        switchToLogin();
+        registerSuccess.textContent = 'Registration successful! Please login.';
+        registerSuccess.classList.remove('hidden');
         registerForm.reset();
+
+        // Switch to login form after a short delay
+        setTimeout(() => {
+            switchToLogin();
+        }, 2000);
     } catch (error) {
         // Show error in the form
         registerError.textContent = error.message;
@@ -151,20 +165,24 @@ async function handleRegister(e) {
 function switchForm(e) {
     const formType = e.target.dataset.form;
 
-    // Clear any existing errors
+    // Clear any existing messages
     loginError.textContent = '';
     loginError.classList.add('hidden');
+    loginSuccess.textContent = '';
+    loginSuccess.classList.add('hidden');
     registerError.textContent = '';
     registerError.classList.add('hidden');
+    registerSuccess.textContent = '';
+    registerSuccess.classList.add('hidden');
 
     // Remove active styles from all tabs
     tabBtns.forEach((btn) => {
-        btn.classList.remove('bg-blue-600');
-        btn.classList.add('bg-gray-100', 'text-black');
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-100');
     });
 
     // Add active styles to clicked tab
-    e.target.classList.remove('bg-gray-100', 'text-black');
+    e.target.classList.remove('bg-gray-100');
     e.target.classList.add('bg-blue-600', 'text-white');
 
     if (formType === 'login') {

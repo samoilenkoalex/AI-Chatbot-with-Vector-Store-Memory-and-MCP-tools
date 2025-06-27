@@ -9,7 +9,7 @@ export const config: Config = {
     JWT_SECRET:
         process.env.JWT_SECRET ||
         'your-super-secret-jwt-key-change-this-in-production',
-    JWT_EXPIRY: process.env.JWT_EXPIRY || '1h',
+    JWT_EXPIRY: process.env.JWT_EXPIRY || '3650d',
 };
 
 export const { PORT, JWT_SECRET, JWT_EXPIRY } = config;

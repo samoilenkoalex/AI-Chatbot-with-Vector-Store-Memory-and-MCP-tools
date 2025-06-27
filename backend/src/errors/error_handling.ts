@@ -5,7 +5,6 @@ interface CustomError extends Error {
     code?: string;
 }
 
-
 export const errorHandler: ErrorRequestHandler = (
     err: CustomError,
     req: Request,

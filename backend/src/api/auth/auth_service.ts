@@ -1,12 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../../utils/jwt_utils';
-import { v4 as uuidv4 } from 'uuid';
-
-interface User {
-    userId: string;
-    username: string;
-    password: string;
-}
+import User from '../../models/User';
+import '../../config/database';
 
 interface AuthResponse {
     message: string;
@@ -23,16 +18,24 @@ class AuthError extends Error {
     }
 }
 
-// Temporary in-memory storage (replace with database)
-const users: User[] = [];
-
 export class AuthService {
+    private static async logAllUsers() {
+        const users = await User.findAll({
+            attributes: ['id', 'username'], // Exclude password from logs
+        });
+        console.log('\n=== Current Users in Database During Auth ===');
+        console.table(users.map((u) => ({ id: u.id, username: u.username })));
+        console.log('================================\n');
+    }
+
     static async register(
         username: string,
         password: string
     ): Promise<AuthResponse> {
-        // Validate input
+        console.log('\n[Register] Attempting to register user:', username);
+
         if (!username || username.trim().length < 3) {
+            console.log('[Register] Error: Invalid username length');
             throw new AuthError(
                 'Username must be at least 3 characters long',
                 'INVALID_USERNAME'
@@ -40,6 +43,7 @@ export class AuthService {
         }
 
         if (!password || password.length < 6) {
+            console.log('[Register] Error: Invalid password length');
             throw new AuthError(
                 'Password must be at least 6 characters long',
                 'INVALID_PASSWORD'
@@ -47,7 +51,9 @@ export class AuthService {
         }
 
         // Check if user exists
-        if (users.find((u) => u.username === username)) {
+        const existingUser = await User.findOne({ where: { username } });
+        if (existingUser) {
+            console.log('[Register] Error: Username already exists');
             throw new AuthError('Username already exists', 'USERNAME_TAKEN');
         }
 
@@ -56,13 +62,18 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Create user
-        const user: User = {
-            userId: uuidv4(),
+        const user = await User.create({
             username,
             password: hashedPassword,
-        };
-        users.push(user);
+        });
+        console.log(
+            '[Register] Successfully registered user:',
+            username,
+            'with ID:',
+            user.id
+        );
 
+        await this.logAllUsers();
         return { message: 'User registered successfully' };
     }
 
@@ -70,8 +81,11 @@ export class AuthService {
         username: string,
         password: string
     ): Promise<AuthResponse> {
+        console.log('\n[Login] Attempting login for user:', username);
+
         // Validate input
         if (!username || !password) {
+            console.log('[Login] Error: Missing credentials');
             throw new AuthError(
                 'Username and password are required',
                 'MISSING_CREDENTIALS'
@@ -79,22 +93,32 @@ export class AuthService {
         }
 
         // Find user
-        const user = users.find((u) => u.username === username);
+        const user = await User.findOne({ where: { username } });
         if (!user) {
+            console.log('[Login] Error: User not found');
             throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS');
         }
 
         // Verify password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
+            console.log('[Login] Error: Invalid password');
             throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS');
         }
 
         // Generate token
         const token = generateToken({
-            userId: user.userId,
+            userId: user.id,
             username: user.username,
         });
+
+        console.log(
+            '[Login] Successful login for user:',
+            username,
+            'with ID:',
+            user.id
+        );
+        await this.logAllUsers();
 
         return {
             message: 'Login successful',
@@ -102,10 +126,15 @@ export class AuthService {
         };
     }
 
-    static async getUserByUsername(
-        username: string
-    ): Promise<User | undefined> {
-        return users.find((u) => u.username === username);
+    static async getUserByUsername(username: string): Promise<User | null> {
+        console.log('\n[GetUser] Looking up user:', username);
+        const user = await User.findOne({ where: { username } });
+        if (user) {
+            console.log('[GetUser] Found user with ID:', user.id);
+        } else {
+            console.log('[GetUser] User not found');
+        }
+        return user;
     }
 }
 
