@@ -1,11 +1,7 @@
-import express from 'express';
-import path from 'path';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import { PORT } from './config/config';
-import app from './app';
-import { testConnection, initializeDatabase } from './config/database';
-import User from './models/user.model';
+import { PORT } from './config/config.js';
+import app from './app.js';
+import { testConnection, initializeDatabase } from './config/database.js';
+import User from './models/user_model.js';
 
 // Function to display all users
 const displayAllUsers = async () => {
