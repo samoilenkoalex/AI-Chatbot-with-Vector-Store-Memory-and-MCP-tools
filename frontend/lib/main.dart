@@ -7,7 +7,7 @@ import 'common/repository_holder.dart';
 import 'core/di/service_locator.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 import 'features/auth/cubit/auth_state.dart';
-import 'features/screens/auth_screen.dart';
+import 'features/auth/screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() async {

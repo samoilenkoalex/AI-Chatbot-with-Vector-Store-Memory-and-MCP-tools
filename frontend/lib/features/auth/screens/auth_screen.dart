@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../auth/cubit/auth_cubit.dart';
-import '../auth/cubit/auth_state.dart';
+
+import '../cubit/auth_cubit.dart';
+import '../cubit/auth_state.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -92,8 +93,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 BlocBuilder<AuthCubit, AuthState>(
                   builder: (context, state) {
                     return ElevatedButton(
-                      onPressed:
-                          state is! AuthAuthenticated ? _submitForm : null,
+                      onPressed: state is! AuthAuthenticated ? _submitForm : null,
                       child: Text(_isLogin ? 'Login' : 'Register'),
                     );
                   },
@@ -105,9 +105,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     });
                   },
                   child: Text(
-                    _isLogin
-                        ? 'Don\'t have an account? Register'
-                        : 'Already have an account? Login',
+                    _isLogin ? 'Don\'t have an account? Register' : 'Already have an account? Login',
                   ),
                 ),
               ],
