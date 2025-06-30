@@ -11,8 +11,8 @@ class AuthCubit extends Cubit<AuthState> {
     checkAuthStatus();
   }
 
-  void checkAuthStatus() {
-    final token = authRepository.getToken();
+  void checkAuthStatus() async {
+    final token = await authRepository.getToken();
     if (token != null) {
       emit(AuthAuthenticated(token));
     } else {

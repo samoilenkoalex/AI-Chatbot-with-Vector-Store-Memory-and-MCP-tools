@@ -1,7 +1,6 @@
-import 'package:get_it/get_it.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/auth_request.dart';
 import '../services/auth_api_service.dart';
+import '../../../common/utils/shared_preferences.dart';
 
 abstract class AuthRepository {
   final AuthApiService authApiService;
@@ -11,13 +10,12 @@ abstract class AuthRepository {
   Future<AuthResponse> login(AuthRequest request);
   Future<AuthResponse> register(AuthRequest request);
   Future<void> logout();
-  String? getToken();
+  Future<String?> getToken();
 }
 
 class AuthRepositoryImpl implements AuthRepository {
   @override
   final AuthApiService authApiService;
-  final SharedPreferences _prefs = GetIt.instance<SharedPreferences>();
 
   AuthRepositoryImpl({
     required this.authApiService,
@@ -27,7 +25,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthResponse> login(AuthRequest request) async {
     final response = await authApiService.login(request);
     if (response.success && response.token != null) {
-      await _prefs.setString('token', response.token!);
+      await saveJwtToken(token: response.token!);
     }
     return response;
   }
@@ -43,11 +41,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    await _prefs.remove('token');
+    await removeJwtToken();
   }
 
   @override
-  String? getToken() {
-    return _prefs.getString('token');
+  Future<String?> getToken() {
+    return getSavedJwtToken();
   }
 }
