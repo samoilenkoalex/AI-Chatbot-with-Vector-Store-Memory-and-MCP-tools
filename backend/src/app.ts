@@ -1,30 +1,17 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import apiRoutes from './api';
-import { errorHandler } from './errors/error_handling';
+import bodyParser from 'body-parser';
+import authRoutes from './routes/auth.routes';
 
 const app = express();
 
-app.use((req: Request, res: Response, next: NextFunction) => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-    next();
-});
-
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/auth', express.static(path.join(__dirname, '../public/pages/auth')));
-app.use('/main', express.static(path.join(__dirname, '../public/pages/main')));
+// Routes
+app.use('/api/auth', authRoutes);
 
-app.use(express.static(path.join(__dirname, '../public')));
-
-app.use('/api', apiRoutes);
-
-app.get('/', (req: Request, res: Response) => {
-    res.redirect('/auth');
-});
-
-app.use(errorHandler);
 
 export default app;
