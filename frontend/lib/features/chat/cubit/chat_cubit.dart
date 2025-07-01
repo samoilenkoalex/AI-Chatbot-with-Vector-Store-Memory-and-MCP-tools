@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../models/chat_message.dart';
-import '../models/llm_request.dart';
+import '../models/chat_request.dart';
 import '../repository/chat_repository.dart';
 import 'chat_state.dart';
 
@@ -14,56 +14,93 @@ class ChatCubit extends Cubit<ChatState> {
     required this.repository,
   }) : super(const ChatState());
 
-  Future<void> loadChatHistory() async {
-    emit(state.copyWith(status: ChatStatus.loading));
+  void clearChat() {
+    emit(state.copyWithMessages(
+      messages: const [],
+      chatHistoryStatus: ChatStatus.initial,
+    ));
+  }
+
+  Future<void> loadChatItems() async {
+    emit(state.copyWith(chatItemsStatus: ChatStatus.loading));
 
     try {
-      final chatHistory = await repository.fetchChatHistory();
-      final messages = chatHistory.map((msg) => ChatMessage.fromMap(msg)).toList();
-
+      final items = await repository.fetchChatItems();
       emit(state.copyWith(
-        messages: messages,
-        status: ChatStatus.success,
+        chatItems: items,
+        chatItemsStatus: ChatStatus.success,
       ));
     } catch (e) {
       emit(state.copyWith(
-        status: ChatStatus.error,
+        chatItemsStatus: ChatStatus.error,
         errorMessage: e.toString(),
       ));
     }
   }
 
-  void sendMessage(String message) async {
+  Future<void> loadChatHistory([String? chatId]) async {
+    if (chatId == null) {
+      clearChat();
+      return;
+    }
+
+    emit(state.copyWithMessages(chatHistoryStatus: ChatStatus.loading));
+
+    try {
+      final messages = await repository.fetchChatHistory(chatId);
+
+      emit(state.copyWithMessages(
+        messages: messages,
+        chatHistoryStatus: ChatStatus.success,
+      ));
+    } catch (e) {
+      emit(state.copyWithMessages(
+        chatHistoryStatus: ChatStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  void sendMessage(String message, {String? chatId, String? chatName}) async {
     if (message.trim().isEmpty) return;
 
     // Add user message
-    final messages = List<ChatMessage>.from(state.messages)..add(ChatMessage(role: 'user', content: message));
+    final messages = List<ChatMessage>.from(state.messages)
+      ..add(ChatMessage(role: 'user', content: message));
 
-    emit(state.copyWith(
+    emit(state.copyWithMessages(
       messages: messages,
-      status: ChatStatus.loading,
+      chatHistoryStatus: ChatStatus.loading,
     ));
 
     try {
-      final request = LLMRequest(
+      final request = ChatRequest(
         userMessage: message,
+        chatId: chatId,
+        chatName: chatName,
       );
 
       await for (final response in repository.streamChat(request: request)) {
         log('Received response: $response');
-        final messages = List<ChatMessage>.from(state.messages)..add(ChatMessage.fromMap(response));
+        final messages = List<ChatMessage>.from(state.messages)..add(response);
 
-        emit(state.copyWith(
+        emit(state.copyWithMessages(
           messages: messages,
-          status: ChatStatus.success,
+          chatHistoryStatus: ChatStatus.success,
         ));
       }
-    } catch (e) {
-      final messages = List<ChatMessage>.from(state.messages)..add(ChatMessage(role: 'error', content: 'Error: $e'));
 
-      emit(state.copyWith(
+      // Only reload chat items if it's a new chat or the chat name is being set
+      if (chatId == null || chatName != null) {
+        loadChatItems();
+      }
+    } catch (e) {
+      final messages = List<ChatMessage>.from(state.messages)
+        ..add(ChatMessage(role: 'error', content: 'Error: $e'));
+
+      emit(state.copyWithMessages(
         messages: messages,
-        status: ChatStatus.error,
+        chatHistoryStatus: ChatStatus.error,
         errorMessage: e.toString(),
       ));
     }

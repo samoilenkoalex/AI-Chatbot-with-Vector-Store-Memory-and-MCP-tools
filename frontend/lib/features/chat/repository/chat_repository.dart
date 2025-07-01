@@ -1,6 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/llm_request.dart';
+import '../models/chat_request.dart';
+import '../models/chat_message.dart';
+import '../models/chat_item.dart';
 import '../services/chat_service.dart';
 
 abstract class ChatRepository {
@@ -8,11 +8,13 @@ abstract class ChatRepository {
 
   ChatRepository(this.chatApiService);
 
-  Stream<Map<String, String>> streamChat({
-    required LLMRequest request,
+  Stream<ChatMessage> streamChat({
+    required ChatRequest request,
   });
 
-  Future<List<Map<String, String>>> fetchChatHistory();
+  Future<List<ChatMessage>> fetchChatHistory([String? chatId]);
+
+  Future<List<ChatItem>> fetchChatItems();
 }
 
 class ChatRepositoryImpl implements ChatRepository {
@@ -22,14 +24,19 @@ class ChatRepositoryImpl implements ChatRepository {
   ChatRepositoryImpl({required this.chatApiService});
 
   @override
-  Stream<Map<String, String>> streamChat({
-    required LLMRequest request,
+  Stream<ChatMessage> streamChat({
+    required ChatRequest request,
   }) {
     return chatApiService.streamChat(request);
   }
 
   @override
-  Future<List<Map<String, String>>> fetchChatHistory() {
-    return chatApiService.fetchChatHistory();
+  Future<List<ChatMessage>> fetchChatHistory([String? chatId]) {
+    return chatApiService.fetchChatHistory(chatId);
+  }
+
+  @override
+  Future<List<ChatItem>> fetchChatItems() {
+    return chatApiService.fetchChatItems();
   }
 }

@@ -1,117 +1,55 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../common/utils/shared_preferences.dart';
 import '../../../core/consts.dart';
-import '../models/llm_request.dart';
+import '../models/chat_item.dart';
+import '../models/chat_message.dart';
+import '../models/chat_request.dart';
+import '../utils/chat_helpers.dart';
 
 class ChatApiService {
-  final SharedPreferences _prefs = GetIt.instance<SharedPreferences>();
-
   ChatApiService();
 
-  Stream<Map<String, String>> streamChat(LLMRequest llmRequest) async* {
-    final authToken = _prefs.getString('token');
-
-    if (authToken == null || authToken.isEmpty) {
-      yield {
-        'type': 'error',
-        'content': 'Not authenticated. Please log in.',
-      };
+  Stream<ChatMessage> streamChat(ChatRequest llmRequest) async* {
+    final authToken = await getAuthToken();
+    if (authToken == null) {
+      yield const ChatMessage(
+        role: 'error',
+        content: 'Not authenticated. Please log in.',
+      );
       return;
     }
 
     final client = http.Client();
     try {
-      final url = '$baseUrl/api/chat/message';
-      log('Creating request to: $url');
-      log('Using auth token: $authToken');
-
-      final request = http.Request('POST', Uri.parse(url));
-
-      // Add headers including authorization
-      request.headers.addAll({
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $authToken',
-      });
-
-      // Match the backend's expected request format
-      final requestBody = {
-        'message': llmRequest.userMessage,
-      };
-      request.body = jsonEncode(requestBody);
-
+      final request = createChatRequest(authToken, llmRequest);
       final response = await client.send(request);
       log('Response status code: ${response.statusCode}');
 
       if (response.statusCode != 200) {
         final errorBody = await response.stream.bytesToString();
-        log('Error response: $errorBody');
-
-        if (response.statusCode == 401) {
-          yield {
-            'type': 'error',
-            'content': 'Authentication failed. Please log in again.',
-          };
-          return;
-        }
-
-        try {
-          final errorJson = jsonDecode(errorBody);
-          yield {
-            'type': 'error',
-            'content': errorJson['message'] ?? 'Unknown error occurred',
-          };
-        } catch (_) {
-          yield {
-            'type': 'error',
-            'content': 'Failed to send message: ${response.statusCode}\n$errorBody',
-          };
-        }
+        yield handleErrorResponse(response.statusCode, errorBody);
         return;
       }
 
-      // Read the complete response
       final responseBody = await response.stream.bytesToString();
-      log('Response body: $responseBody');
-
-      try {
-        final jsonResponse = jsonDecode(responseBody);
-        if (jsonResponse['messages'] != null && jsonResponse['messages'].isNotEmpty) {
-          final message = jsonResponse['messages'][0];
-          yield {
-            'type': 'assistant',
-            'content': message.toString(),
-          };
-        } else {
-          yield {
-            'type': 'error',
-            'content': 'No message in response',
-          };
-        }
-      } catch (e) {
-        log('Error parsing response: $e');
-        yield {
-          'type': 'error',
-          'content': 'Failed to parse response: $e',
-        };
-      }
+      yield handleSuccessResponse(responseBody);
     } catch (e) {
       log('Error in streamChat: $e');
-      yield {
-        'type': 'error',
-        'content': 'Error: $e',
-      };
+      yield ChatMessage(
+        role: 'error',
+        content: 'Error: $e',
+      );
     } finally {
       client.close();
     }
   }
 
   Future<Map<String, dynamic>> searchMemory(String query) async {
-    final authToken = _prefs.getString('token');
+    final authToken = await getSavedJwtToken();
 
     if (authToken == null || authToken.isEmpty) {
       throw Exception('Not authenticated. Please log in.');
@@ -143,8 +81,62 @@ class ChatApiService {
     }
   }
 
-  Future<List<Map<String, String>>> fetchChatHistory() async {
-    final authToken = _prefs.getString('token');
+  Future<List<ChatMessage>> fetchChatHistory([String? chatId]) async {
+    final authToken = await getSavedJwtToken();
+
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception('Not authenticated. Please log in.');
+    }
+
+    try {
+      final url = chatId != null ? '$baseUrl/api/chat/current?chatId=$chatId' : '$baseUrl/api/chat/current';
+
+      log('Fetching chat history from: $url');
+      log('Using auth token: $authToken');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+      );
+
+      log('Response status code: ${response.statusCode}');
+      log('Response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        if (response.statusCode == 401) {
+          throw Exception('Authentication failed. Please log in again.');
+        }
+
+        final errorBody = response.body;
+        throw Exception('Failed to fetch chat history: ${response.statusCode}\nResponse: $errorBody');
+      }
+
+      try {
+        final jsonResponse = jsonDecode(response.body);
+        final List<dynamic> messages = jsonResponse['messages'] ?? [];
+
+        return messages
+            .map((message) => ChatMessage(
+                  role: message['role'] as String,
+                  content: message['content'] as String,
+                ))
+            .toList();
+      } catch (e) {
+        log('Error parsing JSON response: $e');
+        log('Raw response body: ${response.body}');
+        rethrow;
+      }
+    } catch (e) {
+      log('Error fetching chat history: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<ChatItem>> fetchChatItems() async {
+    final authToken = await getSavedJwtToken();
 
     if (authToken == null || authToken.isEmpty) {
       throw Exception('Not authenticated. Please log in.');
@@ -152,12 +144,14 @@ class ChatApiService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/chat/current'),
+        Uri.parse('$baseUrl/api/chat/items'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $authToken',
         },
       );
+
+      log('Chat items response body: ${response.body}');
 
       if (response.statusCode != 200) {
         if (response.statusCode == 401) {
@@ -165,39 +159,14 @@ class ChatApiService {
         }
 
         final errorBody = jsonDecode(response.body);
-        throw Exception(errorBody['error'] ?? 'Failed to fetch chat history: ${response.statusCode}');
+        throw Exception(errorBody['error'] ?? 'Failed to fetch chat items: ${response.statusCode}');
       }
 
       final jsonResponse = jsonDecode(response.body);
-      final results = jsonResponse['results'] as List;
-      final List<Map<String, String>> messages = [];
-
-      // Process messages in chronological order (oldest first)
-      for (final item in results) {
-        final question = item['question'] as String?;
-        final responseText = item['response'] as String?;
-
-        if (question == null || responseText == null) {
-          log('Warning: Incomplete chat history item: $item');
-          continue;
-        }
-
-        // Add the user's question
-        messages.add({
-          'role': 'user',
-          'content': question,
-        });
-
-        // Add the assistant's response
-        messages.add({
-          'role': 'assistant',
-          'content': responseText,
-        });
-      }
-
-      return messages;
+      final List<dynamic> results = jsonResponse['results'] ?? [];
+      return results.map((item) => ChatItem.fromMap(item)).toList();
     } catch (e) {
-      log('Error fetching chat history: $e');
+      log('Error fetching chat items: $e');
       rethrow;
     }
   }
