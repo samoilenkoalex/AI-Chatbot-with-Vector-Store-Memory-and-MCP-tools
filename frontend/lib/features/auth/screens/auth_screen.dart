@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
@@ -45,6 +46,8 @@ class _AuthScreenState extends State<AuthScreen> {
               backgroundColor: Colors.red,
             ),
           );
+        } else if (state is AuthAuthenticated) {
+          context.go('/');
         }
       },
       child: Scaffold(
@@ -92,9 +95,16 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 24),
                 BlocBuilder<AuthCubit, AuthState>(
                   builder: (context, state) {
+                    final isLoading = state is AuthLoading;
                     return ElevatedButton(
-                      onPressed: state is! AuthAuthenticated ? _submitForm : null,
-                      child: Text(_isLogin ? 'Login' : 'Register'),
+                      onPressed: isLoading ? null : _submitForm,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(_isLogin ? 'Login' : 'Register'),
                     );
                   },
                 ),
@@ -105,7 +115,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     });
                   },
                   child: Text(
-                    _isLogin ? 'Don\'t have an account? Register' : 'Already have an account? Login',
+                    _isLogin
+                        ? 'Don\'t have an account? Register'
+                        : 'Already have an account? Login',
                   ),
                 ),
               ],

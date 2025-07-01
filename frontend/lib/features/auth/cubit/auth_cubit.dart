@@ -21,6 +21,7 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> login(String username, String password) async {
+    emit(const AuthLoading());
     try {
       final request = AuthRequest(username: username, password: password);
       final response = await authRepository.login(request);
@@ -36,6 +37,7 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> register(String username, String password) async {
+    emit(const AuthLoading());
     try {
       final request = AuthRequest(username: username, password: password);
       final response = await authRepository.register(request);
