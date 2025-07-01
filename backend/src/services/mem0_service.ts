@@ -73,9 +73,6 @@ export async function addToMem0(
         metadata: {
             appId: APP_ID,
         },
-        custom_categories: [
-            { health: 'Health-related information and preferences' },
-        ],
     });
 
     console.log('Memory added to mem0ai with response:', mem0Response);
