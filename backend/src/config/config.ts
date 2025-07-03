@@ -31,3 +31,6 @@ export const QDRANT_HOST = requireEnvVar('QDRANT_HOST');
 export const QDRANT_PORT = parseInt(requireEnvVar('QDRANT_PORT'), 10);
 export const QDRANT_COLLECTION = requireEnvVar('QDRANT_COLLECTION');
 export const VECTOR_DIMENSION = 768;
+
+// Tavily configuration
+export const TAVILY_API_KEY = process.env.TAVILY_API_KEY || '';

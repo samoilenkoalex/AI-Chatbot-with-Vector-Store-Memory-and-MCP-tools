@@ -15,6 +15,10 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "@langchain/core": "^0.3.61",
+        "@langchain/langgraph": "^0.3.6",
+        "@langchain/openai": "^0.5.16",
+        "@tavily/core": "^0.5.9",
         "bcryptjs": "^3.0.2",
         "body-parser": "^2.2.0",
         "cors": "^2.8.5",
@@ -27,6 +31,7 @@
         "node-fetch": "^2.7.0",
         "sequelize": "^6.37.7",
         "sqlite3": "^5.1.7",
+        "tavily-mcp": "^0.2.4",
         "uuid": "^9.0.1"
     },
     "devDependencies": {

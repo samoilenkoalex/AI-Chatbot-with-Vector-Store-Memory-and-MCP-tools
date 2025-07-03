@@ -127,7 +127,10 @@ export async function searchQdrant(
         }
 
         const searchBody = {
-            vector: vector,
+            vector: {
+                name: 'default',
+                vector: vector,
+            },
             limit: 5,
             with_payload: true,
             filter: {
@@ -219,7 +222,9 @@ export async function addToQdrant(
         points: [
             {
                 id: pointId,
-                vector: vector,
+                vectors: {
+                    default: vector,
+                },
                 payload: cleanPayload,
             },
         ],

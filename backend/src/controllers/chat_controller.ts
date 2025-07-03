@@ -30,6 +30,8 @@ class ChatController {
     async chat(req: Request, res: Response) {
         try {
             const { message, chatId, chatName } = req.body;
+
+            console.log('message>>>>>>:', message);
             const userId = (req as any).user?.id;
 
             if (!message) {
@@ -130,6 +132,32 @@ class ChatController {
         } catch (error) {
             console.error('Error fetching chat items:', error);
             res.status(500).json({ error: 'Failed to fetch chat items' });
+        }
+    }
+
+    async handleMessage(req: Request, res: Response) {
+        try {
+            const { message, userId, chatId, chatName } = req.body;
+            const result = await this.chatService.chat(
+                message,
+                userId,
+                chatId,
+                chatName
+            );
+
+            // Check if we have a raw tool response
+            const firstMessage = result.messages?.[0] as unknown as {
+                content: string;
+                additional_kwargs?: {
+                    is_raw_tool_response?: boolean;
+                };
+            };
+
+            // Always return the response, whether it's from Tavily or LLM
+            res.json(result);
+        } catch (error) {
+            console.error('Error in handleMessage:', error);
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 }
