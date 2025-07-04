@@ -21,28 +21,11 @@ import {
     addToQdrant,
 } from './services/qdrant_service.js';
 import { addToMem0 } from './services/mem0_service.js';
-// import { DynamicStructuredTool } from '@langchain/core/tools';
 import { VECTOR_DIMENSION, APP_ID } from './config/config.js';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
-// import { z } from 'zod';
-// import { spawn, ChildProcess } from 'child_process';
-// import { createInterface, Interface } from 'readline';
 import { tavilySearchTool } from './tools/tavily_search_tool.js';
 import { firecrawlSearchTool } from './tools/firecrawl_search_tool.js';
 
-// interface JsonRpcRequest {
-//     jsonrpc: '2.0';
-//     id: number;
-//     method: string;
-//     params: Record<string, any>;
-// }
-
-// interface SearchResult {
-//     title: string;
-//     content: string;
-// }
-
-// Define the state schema for our graph
 const ChatAgentState = Annotation.Root({
     ...MessagesAnnotation.spec,
     question: Annotation<string>,

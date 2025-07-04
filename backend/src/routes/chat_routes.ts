@@ -13,11 +13,11 @@ router.post(
     },
     chatController.chat.bind(chatController)
 );
-router.post(
-    '/search-memory',
-    verifyToken,
-    chatController.searchMemory.bind(chatController)
-);
+// router.post(
+//     '/search-memory',
+//     verifyToken,
+//     chatController.searchMemory.bind(chatController)
+// );
 
 // Route to fetch current chat history
 router.get(
