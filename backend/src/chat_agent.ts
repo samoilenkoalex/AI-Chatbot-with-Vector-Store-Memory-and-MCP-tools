@@ -28,6 +28,7 @@ import { ToolNode } from '@langchain/langgraph/prebuilt';
 // import { spawn, ChildProcess } from 'child_process';
 // import { createInterface, Interface } from 'readline';
 import { tavilySearchTool } from './tools/tavily_search_tool.js';
+import { firecrawlSearchTool } from './tools/firecrawl_search_tool.js';
 
 // interface JsonRpcRequest {
 //     jsonrpc: '2.0';
@@ -79,7 +80,7 @@ export class ChatAgent {
     }
 
     private constructor() {
-        this.toolNode = new ToolNode([tavilySearchTool]);
+        this.toolNode = new ToolNode([tavilySearchTool, firecrawlSearchTool]);
         if (!this._initialized) {
             this._initialized = true;
             console.log('ChatAgent initialized');
@@ -156,7 +157,8 @@ export class ChatAgent {
                 .join('\n')
         );
 
-        // Only trigger tool for news queries
+        // Check for URL in the question
+        const urlMatch = state.question.match(/https?:\/\/[^\s]+/);
         const isNewsQuery =
             state.question.toLowerCase().includes('news') ||
             state.question.toLowerCase().includes('latest') ||
@@ -167,10 +169,21 @@ export class ChatAgent {
             searchResults: null,
             messages: [
                 new AIMessage({
-                    content: isNewsQuery
+                    content: urlMatch
+                        ? "I'll scrape the content from that URL."
+                        : isNewsQuery
                         ? "I'll search for recent information about that."
                         : 'Let me check what I know about that.',
-                    tool_calls: isNewsQuery
+                    tool_calls: urlMatch
+                        ? [
+                              {
+                                  name: 'firecrawl_search',
+                                  args: { url: urlMatch[0] },
+                                  id: 'firecrawl_call_' + Date.now(),
+                                  type: 'tool_call',
+                              },
+                          ]
+                        : isNewsQuery
                         ? [
                               {
                                   name: 'tavily_search',
@@ -203,7 +216,19 @@ export class ChatAgent {
             typeof lastMessage.content === 'string'
         ) {
             try {
-                const parsedContent = JSON.parse(lastMessage.content);
+                // Check if content looks like JSON before parsing
+                const content = lastMessage.content.trim();
+                if (!content.startsWith('{') && !content.startsWith('[')) {
+                    console.error('Tavily returned non-JSON content:', content);
+                    // Handle error gracefully - skip this message
+                    return {
+                        context: '',
+                        response: '',
+                        messages: state.messages,
+                    };
+                }
+
+                const parsedContent = JSON.parse(content);
                 console.log(
                     'Parsed search results from ToolMessage:',
                     parsedContent
@@ -224,23 +249,73 @@ export class ChatAgent {
                 };
             } catch (e) {
                 console.error('Error parsing Tavily result:', e);
+                console.error(
+                    'Raw content that failed to parse:',
+                    lastMessage.content
+                );
+                // Handle error gracefully - skip this message
+                return {
+                    context: '',
+                    response: '',
+                    messages: state.messages,
+                };
             }
         }
 
-        // If not a Tavily result, proceed with normal memory search
-        try {
-            const messageContent =
-                typeof lastMessage.content === 'string'
-                    ? lastMessage.content
-                    : JSON.stringify(lastMessage.content);
+        // Build context from Qdrant memories
+        if (
+            state.memories &&
+            state.memories.results &&
+            state.memories.results.length > 0
+        ) {
+            // First, collect all mem0_responses
+            const mem0Responses = state.memories.results
+                .map(
+                    (m: { metadata: { mem0_response: string } }) =>
+                        m.metadata.mem0_response
+                )
+                .filter((response: string) => response && response.length > 0);
 
-            const memories = await this.memoryClient.searchMemories(
-                messageContent,
-                5
-            );
-            context = memories.map((memory) => memory.pageContent).join('\n');
-        } catch (error) {
-            console.error('Error searching memories:', error);
+            // Then collect conversation history
+            const conversationHistory = state.memories.results
+                .map((memory: { memory: string }) => memory.memory)
+                .filter((memory: string) => memory && memory.length > 0);
+
+            // Build the context string
+            const contextParts = [];
+
+            if (mem0Responses.length > 0) {
+                contextParts.push('User Context:\n' + mem0Responses.join('\n'));
+            }
+
+            if (conversationHistory.length > 0) {
+                contextParts.push(
+                    'Conversation History:\n' + conversationHistory.join('\n\n')
+                );
+            }
+
+            context = contextParts.join('\n\n');
+            console.log('Built context:', context);
+        }
+
+        // If we have no Qdrant memories, try searching through memory client
+        if (!context) {
+            try {
+                const messageContent =
+                    typeof lastMessage.content === 'string'
+                        ? lastMessage.content
+                        : JSON.stringify(lastMessage.content);
+
+                const memories = await this.memoryClient.searchMemories(
+                    messageContent,
+                    5
+                );
+                context = memories
+                    .map((memory) => memory.pageContent)
+                    .join('\n');
+            } catch (error) {
+                console.error('Error searching memories:', error);
+            }
         }
 
         return {
@@ -260,29 +335,36 @@ export class ChatAgent {
 
         console.log('Getting LLM response...');
 
-        const messages = [
-            {
-                role: 'system' as const,
-                content: `You are a helpful assistant. Use the provided context to personalize your responses and remember past interactions. You have access to a tool called 'tavily_search' that can search the web for real-time information. Use it when needed.\n\n${state.context}`,
-            },
-            {
-                role: 'user' as const,
-                content: state.question,
-            },
-        ];
+        const systemMessage = `You are a helpful assistant with memory of past conversations. You should use the provided context to maintain continuity in the conversation and provide personalized responses based on previous interactions.
 
-        const response = await getLLMResponse(messages);
+When context is provided, make sure to:
+1. Reference relevant past interactions naturally
+2. Build upon previous responses
+3. Maintain consistency with earlier statements
+4. Use memory context to provide more personalized and contextual responses
 
-        const updatedMessages = [
-            new SystemMessage(
-                `You are a helpful assistant. Use the provided context to personalize your responses and remember past interactions. You have access to a tool called 'tavily_search' that can search the web for real-time information. Use it when needed.\n\n${state.context}`
-            ),
-            new HumanMessage(state.question),
-            new AIMessage(response),
-        ];
+Here is the relevant context from our conversation history:
+${state.context}
+
+IMPORTANT: While you have access to various tools for searching and retrieving information, NEVER mention these tools or search capabilities in your responses. Simply use them when needed and incorporate the information naturally into your responses.
+
+Remember:
+- DO NOT mention any tool names (like tavily_search, firecrawl_search, etc.)
+- DO NOT discuss the search process or how you get information
+- DO NOT reference that you have tools available
+- Just provide helpful, natural responses using the information you have`;
+
+        const response = await getLLMResponse([
+            { role: 'system' as const, content: systemMessage },
+            { role: 'user' as const, content: state.question },
+        ]);
 
         return {
-            messages: updatedMessages,
+            messages: [
+                new SystemMessage(systemMessage),
+                new HumanMessage(state.question),
+                new AIMessage(response),
+            ],
             response,
         };
     }
@@ -296,14 +378,19 @@ export class ChatAgent {
             return {};
         }
 
+        // Generate embedding for the full conversation
         const embedding = await getEmbeddings(
             state.question + ' ' + state.response
         );
         const paddedEmbedding = padEmbedding(embedding, VECTOR_DIMENSION);
 
+        // For mem0, we'll use a truncated version if needed
         console.log('Calling mem0 with:', {
             question: state.question,
-            response: state.response,
+            response:
+                state.response.length > 1500
+                    ? 'truncated response...'
+                    : state.response,
             userId: state.userId,
         });
 
@@ -313,21 +400,61 @@ export class ChatAgent {
             state.userId
         );
 
-        let mem0Memory = '';
-        mem0Memory = mem0Response[0]?.data?.memory || '';
+        // Extract memory from mem0 response
+        let extractedMemory = '';
+        if (
+            mem0Response &&
+            Array.isArray(mem0Response) &&
+            mem0Response.length > 0
+        ) {
+            extractedMemory = mem0Response
+                .map((m: any) => m.data && m.data.memory)
+                .filter((content: string) => content && content.length > 0)
+                .join('\n');
+        }
 
-        await addToQdrant(paddedEmbedding, {
+        console.log(
+            'Extracted mem0 memory:',
+            extractedMemory || 'No memory extracted'
+        );
+
+        // Store in Qdrant with full response
+        const payload = {
             question: state.question,
             response: state.response,
             userId: state.userId,
-            appId: state.appId,
+            appId: this.appId,
             timestamp: new Date().toISOString(),
-            mem0_response: mem0Memory,
-            ...(state.chatId && { chat_id: state.chatId }),
-            ...(state.chatName && { chat_name: state.chatName }),
-        });
+            mem0_response: extractedMemory,
+            chat_id: state.chatId,
+            chat_name: state.chatName,
+        };
 
-        return {};
+        console.log('Original payload received by Qdrant:', payload);
+
+        // Clean and truncate fields for Qdrant if needed
+        const cleanedPayload = {
+            ...payload,
+            response:
+                payload.response.length > 8000
+                    ? payload.response.substring(0, 8000) + '... (truncated)'
+                    : payload.response,
+            mem0_response:
+                payload.mem0_response.length > 1000
+                    ? payload.mem0_response.substring(0, 1000) +
+                      '... (truncated)'
+                    : payload.mem0_response,
+        };
+
+        console.log('Cleaned payload for Qdrant:', cleanedPayload);
+
+        try {
+            await addToQdrant(paddedEmbedding, cleanedPayload);
+            return {};
+        } catch (error) {
+            console.error('Error adding to Qdrant:', error);
+            return {};
+        }
     }
 
     public getAppId(): string {

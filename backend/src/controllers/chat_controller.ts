@@ -32,6 +32,8 @@ class ChatController {
             const { message, chatId, chatName } = req.body;
 
             console.log('message>>>>>>:', message);
+
+            console.log('chatName>>>>>>:', chatName);
             const userId = (req as any).user?.id;
 
             if (!message) {
