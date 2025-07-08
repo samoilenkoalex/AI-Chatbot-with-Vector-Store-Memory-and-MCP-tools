@@ -9,7 +9,16 @@ export const tavilySearchTool = new DynamicStructuredTool({
         query: z.string().describe('The search query to look up'),
     }),
     func: async ({ query }: { query: string }) => {
-        const client = new TavilyMCPClient(query);
-        return await client.search();
+        try {
+            const client = new TavilyMCPClient(query);
+            return await client.search();
+        } catch (error: any) {
+            console.error('Tavily search failed:', error);
+            return {
+                content: `I couldn't retrieve the latest information about "${query}" due to a technical issue. Here's what I know from my training data:`,
+                error: error.message || 'Unknown error',
+                already_stored: false,
+            };
+        }
     },
 });

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ChatService } from '../services/chat_service.js';
 import {
-    getAllUserItems,
+    getChatItems,
     getItemsWithChatName,
 } from '../services/qdrant_service.js';
 
@@ -91,36 +91,24 @@ class ChatController {
                 return;
             }
 
-            const chatHistory = await getAllUserItems(userId);
-
-            if (chatId) {
-                // Filter messages for specific chat
-                const filteredHistory = {
-                    results: chatHistory.results.filter(
-                        (item) => item.chat_id === chatId
-                    ),
-                };
-
-                // Transform to expected format
-                const messages = filteredHistory.results
-                    .map((item) => [
-                        { role: 'user', content: item.question },
-                        { role: 'assistant', content: item.response },
-                    ])
-                    .flat();
-
-                res.status(200).json({ messages });
-            } else {
-                // Return all messages in the expected format
-                const messages = chatHistory.results
-                    .map((item) => [
-                        { role: 'user', content: item.question },
-                        { role: 'assistant', content: item.response },
-                    ])
-                    .flat();
-
-                res.status(200).json({ messages });
+            if (!chatId) {
+                res.status(400).json({ error: 'Chat ID is required' });
+                return;
             }
+
+            const chatHistory = await getChatItems(userId, chatId);
+
+            console.log('chatHistory>>>>>>', chatHistory);
+
+            // Transform to expected format
+            const messages = chatHistory.results
+                .map((item: any) => [
+                    { role: 'user', content: item.question },
+                    { role: 'assistant', content: item.response },
+                ])
+                .flat();
+
+            res.status(200).json({ messages });
         } catch (error) {
             console.error('Error fetching chat history:', error);
             res.status(500).json({ error: 'Failed to fetch chat history' });

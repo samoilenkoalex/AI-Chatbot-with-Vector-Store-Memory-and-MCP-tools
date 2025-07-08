@@ -3,6 +3,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import authRoutes from './routes/auth_routes.js';
 import chatRoutes from './routes/chat_routes.js';
+import livekitRoutes from './routes/livekit_routes.js';
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/livekit', livekitRoutes);
 
 export default app;

@@ -380,7 +380,8 @@ Remember:
         const mem0Response = await addToMem0(
             state.question,
             state.response,
-            state.userId
+            state.userId,
+            state.chatId
         );
 
         // Extract memory from mem0 response

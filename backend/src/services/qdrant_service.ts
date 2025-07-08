@@ -185,7 +185,7 @@ export interface QdrantPayload {
     timestamp: string;
     mem0_response?: string;
     chat_id?: string;
-    chat_name?: string;
+    chat_name?: string | null;
 }
 
 export async function addToQdrant(
@@ -259,8 +259,9 @@ export interface UserItemsResponse {
     }>;
 }
 
-export async function getAllUserItems(
-    userId: string
+export async function getChatItems(
+    userId: string,
+    chatId: string
 ): Promise<UserItemsResponse> {
     try {
         const scrollUrl = getQdrantUrl(
@@ -276,6 +277,10 @@ export async function getAllUserItems(
                     {
                         key: 'userId',
                         match: { value: userId },
+                    },
+                    {
+                        key: 'chat_id',
+                        match: { value: chatId },
                     },
                     {
                         key: 'appId',
@@ -317,7 +322,7 @@ export async function getAllUserItems(
                 .filter((result: any) => result !== null),
         };
     } catch (error) {
-        console.error('Error fetching user items from Qdrant:', error);
+        console.error('Error fetching chat items from Qdrant:', error);
         return { results: [] };
     }
 }

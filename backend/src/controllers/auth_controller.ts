@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth_service.js';
+import { AccessToken } from 'livekit-server-sdk';
 
 const authService = new AuthService();
 
