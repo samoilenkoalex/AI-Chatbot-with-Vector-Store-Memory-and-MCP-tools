@@ -22,6 +22,7 @@ import {
 } from './services/qdrant_service.js';
 import { addToMem0 } from './services/mem0_service.js';
 import { VECTOR_DIMENSION, APP_ID } from './config/config.js';
+import { createMemoryContextPrompt } from './config/prompts.js';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { tavilySearchTool } from './tools/tavily_search_tool.js';
 import { firecrawlSearchTool } from './tools/firecrawl_search_tool.js';
@@ -140,7 +141,6 @@ export class ChatAgent {
                 .join('\n')
         );
 
-        // Check for URL in the question
         const urlMatch = state.question.match(/https?:\/\/[^\s]+/);
         const isNewsQuery =
             state.question.toLowerCase().includes('news') ||
@@ -318,24 +318,7 @@ export class ChatAgent {
 
         console.log('Getting LLM response...');
 
-        const systemMessage = `You are a helpful assistant with memory of past conversations. You should use the provided context to maintain continuity in the conversation and provide personalized responses based on previous interactions.
-
-When context is provided, make sure to:
-1. Reference relevant past interactions naturally
-2. Build upon previous responses
-3. Maintain consistency with earlier statements
-4. Use memory context to provide more personalized and contextual responses
-
-Here is the relevant context from our conversation history:
-${state.context}
-
-IMPORTANT: While you have access to various tools for searching and retrieving information, NEVER mention these tools or search capabilities in your responses. Simply use them when needed and incorporate the information naturally into your responses.
-
-Remember:
-- DO NOT mention any tool names (like tavily_search, firecrawl_search, etc.)
-- DO NOT discuss the search process or how you get information
-- DO NOT reference that you have tools available
-- Just provide helpful, natural responses using the information you have`;
+        const systemMessage = createMemoryContextPrompt(state.context);
 
         const response = await getLLMResponse([
             { role: 'system' as const, content: systemMessage },

@@ -34,3 +34,9 @@ export const VECTOR_DIMENSION = 768;
 
 export const TAVILY_API_KEY = process.env.TAVILY_API_KEY || '';
 export const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || '';
+
+export const OPENAI_API_KEY = requireEnvVar('OPENAI_API_KEY');
+export const DEEPGRAM_API_KEY = requireEnvVar('DEEPGRAM_API_KEY');
+export const LIVEKIT_API_KEY = requireEnvVar('LIVEKIT_API_KEY');
+export const LIVEKIT_API_SECRET = requireEnvVar('LIVEKIT_API_SECRET');
+export const LIVEKIT_URL = requireEnvVar('LIVEKIT_URL');
