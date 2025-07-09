@@ -136,14 +136,13 @@ class ChatController {
             );
 
             // Check if we have a raw tool response
-            const firstMessage = result.messages?.[0] as unknown as {
-                content: string;
-                additional_kwargs?: {
-                    is_raw_tool_response?: boolean;
-                };
-            };
+            // const firstMessage = result.messages?.[0] as unknown as {
+            //     content: string;
+            //     additional_kwargs?: {
+            //         is_raw_tool_response?: boolean;
+            //     };
+            // };
 
-            // Always return the response, whether it's from Tavily or LLM
             res.json(result);
         } catch (error) {
             console.error('Error in handleMessage:', error);
