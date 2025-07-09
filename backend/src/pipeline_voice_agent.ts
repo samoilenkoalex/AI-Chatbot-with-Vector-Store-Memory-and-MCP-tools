@@ -1,4 +1,3 @@
-
 import type { JobProcess } from '@livekit/agents';
 import {
     AutoSubscribe,
@@ -19,7 +18,7 @@ import 'dotenv/config';
 import { ensureQdrantCollection } from './services/qdrant_service.js';
 
 import { createMemoryContextPrompt } from './config/prompts.js';
-import { LiveKitService } from './services/livekit_service.js';
+import { memoryService } from './services/memory_service.js';
 
 // Initialize Qdrant collection right away
 (async () => {
@@ -44,14 +43,16 @@ export default defineAgent({
     entry: async (ctx: JobContext) => {
         const userId = process.env.PIPELINE_USER_ID;
         const chatId = process.env.PIPELINE_CHAT_ID;
+
         let memoryContext = '';
         if (chatId && userId) {
-            const livekitService = LiveKitService.getInstance();
-            memoryContext = await livekitService.getMemoryContext(
+            memoryContext = await memoryService.getChatMemoryContext(
                 chatId,
                 userId
             );
         }
+
+        console.log('memoryContext>>>>', memoryContext);
 
         const vad = ctx.proc.userData.vad! as silero.VAD;
         const initialContext = new llm.ChatContext().append({

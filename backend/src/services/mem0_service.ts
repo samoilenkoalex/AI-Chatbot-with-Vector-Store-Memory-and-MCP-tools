@@ -17,8 +17,7 @@ export const memory = new Memory({
         provider: 'ollama',
         config: {
             model: LLM_MODEL,
-            ollama_base_url: '${OLLAMA_BASE_URL}/api/chat',
-
+            ollama_base_url: `${OLLAMA_BASE_URL}/api/chat`,
             temperature: 0.1,
             max_tokens: 1000,
         },

@@ -7,15 +7,9 @@ import {
     LIVEKIT_API_SECRET,
     LIVEKIT_URL,
     APP_ID,
-    VECTOR_DIMENSION,
 } from '../config/config.js';
-import { getEmbeddings, padEmbedding } from './llm_service.js';
-import {
-    addToQdrant,
-    ensureQdrantCollection,
-    getChatItems,
-} from './qdrant_service.js';
-import { addToMem0 } from './mem0_service.js';
+import { ensureQdrantCollection } from './qdrant_service.js';
+import { memoryService } from './memory_service.js';
 
 export class LiveKitService {
     private static instance: LiveKitService;
@@ -30,39 +24,6 @@ export class LiveKitService {
             LiveKitService.instance = new LiveKitService();
         }
         return LiveKitService.instance;
-    }
-
-    public async getMemoryContext(chatId: string, userId: string) {
-        try {
-            const allUserItems = await getChatItems(userId, chatId);
-
-            if (
-                allUserItems &&
-                allUserItems.results &&
-                allUserItems.results.length > 0
-            ) {
-                const chatItems = chatId
-                    ? allUserItems.results.filter(
-                          (item) => item.chat_id === chatId
-                      )
-                    : allUserItems.results;
-
-                if (chatItems.length > 0) {
-                    const mem0Responses = chatItems
-                        .map((item: any) => item.mem0_response)
-                        .filter(
-                            (response: string | undefined) =>
-                                response && response.length > 0
-                        )
-                        .join('\n');
-
-                    return mem0Responses;
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching memory context:', error);
-        }
-        return '';
     }
 
     public async getLivekitConnectionCreds(workerId: string) {
@@ -100,16 +61,23 @@ export class LiveKitService {
         chatName?: string
     ): Promise<{ workerId: string; livekitUrl: string }> {
         return new Promise((resolve, reject) => {
+            // Stop existing server to ensure fresh environment variables
             if (this.serverProcess) {
-                resolve({
-                    workerId: this.workerId!,
-                    livekitUrl: this.livekitUrl!,
-                });
-                return;
+                console.log(
+                    'Stopping existing server to use new userId and chatId'
+                );
+                this.stopServer();
             }
 
+            console.log(
+                'Starting LiveKit server with userId:',
+                userId,
+                'chatId:',
+                chatId
+            );
+
             const creds = {
-                PATH: process.env.PATH,
+                ...process.env,
                 LIVEKIT_API_KEY: LIVEKIT_API_KEY,
                 LIVEKIT_API_SECRET: LIVEKIT_API_SECRET,
                 LIVEKIT_URL: LIVEKIT_URL,
@@ -117,6 +85,12 @@ export class LiveKitService {
                 PIPELINE_CHAT_ID: chatId,
                 ...(chatName ? { PIPELINE_CHAT_NAME: chatName } : {}),
             };
+
+            console.log('Environment variables being set:', {
+                PIPELINE_USER_ID: creds.PIPELINE_USER_ID,
+                PIPELINE_CHAT_ID: creds.PIPELINE_CHAT_ID,
+                PIPELINE_CHAT_NAME: creds.PIPELINE_CHAT_NAME,
+            });
 
             const scriptPath = path.join(
                 process.cwd(),
@@ -207,82 +181,16 @@ export class LiveKitService {
             // Ensure Qdrant collection is initialized
             await ensureQdrantCollection();
 
-            // Generate embedding for the full conversation
-            const embedding = await getEmbeddings(
-                data.question + ' ' + data.response
-            );
-            const paddedEmbedding = padEmbedding(embedding, VECTOR_DIMENSION);
-
-            // For mem0, we'll use a truncated version if needed
-            console.log('Calling mem0 with voice message:', {
-                question: data.question,
-                response:
-                    data.response.length > 1500
-                        ? data.response.substring(0, 1500) +
-                          '... (truncated for log)'
-                        : data.response,
-                userId: data.user_id,
-                chatId: data.chat_id,
-            });
-
-            // Only truncate if absolutely necessary for mem0
-            const mem0Response = await addToMem0(
+            // Store memory using the consolidated service (preserving full response for voice)
+            await memoryService.storeMemory(
                 data.question,
                 data.response,
                 data.user_id,
-                data.chat_id
+                data.chat_id,
+                data.chat_name,
+                { preserveFullResponse: true }
             );
 
-            // Extract memory from mem0 response
-            let extractedMemory = '';
-            if (
-                mem0Response &&
-                Array.isArray(mem0Response) &&
-                mem0Response.length > 0
-            ) {
-                extractedMemory = mem0Response
-                    .map((m: any) => m.data && m.data.memory)
-                    .filter((content: string) => content && content.length > 0)
-                    .join('\n');
-            }
-
-            console.log(
-                'Extracted mem0 memory from voice:',
-                extractedMemory || 'No memory extracted'
-            );
-
-            // Get chat name from environment variable only if explicitly passed
-            const chatName = data.chat_name || null;
-
-            // Store in Qdrant with full response
-            const payload = {
-                question: data.question,
-                response: data.response,
-                userId: data.user_id,
-                appId: APP_ID,
-                timestamp: new Date().toISOString(),
-                mem0_response: data.mem0_response || extractedMemory,
-                chat_id: data.chat_id,
-                chat_name: chatName,
-            };
-
-            console.log('Original voice payload for Qdrant:', payload);
-
-            // Clean and truncate fields for Qdrant if needed
-            const cleanedPayload = {
-                ...payload,
-                // NEVER truncate the response - keep the full message
-                response: payload.response,
-                mem0_response:
-                    payload.mem0_response && payload.mem0_response.length > 1000
-                        ? payload.mem0_response.substring(0, 1000) +
-                          '... (truncated)'
-                        : payload.mem0_response,
-            };
-
-            console.log('Cleaned voice payload for Qdrant:', cleanedPayload);
-
-            await addToQdrant(paddedEmbedding, cleanedPayload);
             console.log('Voice chat message stored successfully');
 
             return {
@@ -293,7 +201,7 @@ export class LiveKitService {
                 chat_name: data.chat_name,
                 user_id: data.user_id,
                 timestamp: new Date().toISOString(),
-                mem0_response: data.mem0_response || extractedMemory,
+                mem0_response: data.mem0_response || '',
             };
         } catch (error) {
             console.error('Error storing voice chat message:', error);

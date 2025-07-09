@@ -1,7 +1,5 @@
 import { ChatAgent } from '../chat_agent.js';
-import { getEmbeddings, padEmbedding } from './llm_service.js';
-import { searchQdrant } from './qdrant_service.js';
-import { VECTOR_DIMENSION } from '../config/config.js';
+import { memoryService } from './memory_service.js';
 
 export class ChatService {
     private chatAgent: ChatAgent;
@@ -45,9 +43,7 @@ export class ChatService {
         chatId?: string
     ): Promise<any> {
         try {
-            const embedding = await getEmbeddings(query);
-            const paddedEmbedding = padEmbedding(embedding, VECTOR_DIMENSION);
-            return await searchQdrant(paddedEmbedding, userId, chatId);
+            return await memoryService.searchMemories(query, userId, chatId);
         } catch (error) {
             console.error('Error searching memory:', error);
             throw error;

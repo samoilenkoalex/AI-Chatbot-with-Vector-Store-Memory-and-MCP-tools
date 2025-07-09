@@ -3,30 +3,23 @@ import {
     HumanMessage,
     SystemMessage,
 } from '@langchain/core/messages';
-import { VECTOR_DIMENSION } from '../config/config.js';
 import { createMemoryContextPrompt } from '../config/prompts.js';
-import {
-    getEmbeddings,
-    getLLMResponse as fetchLLMResponse,
-    padEmbedding,
-} from './llm_service.js';
-import { addToMem0 } from './mem0_service.js';
-import { addToQdrant, searchQdrant } from './qdrant_service.js';
+import { getLLMResponse as fetchLLMResponse } from './llm_service.js';
+import { memoryService } from './memory_service.js';
 
 export async function generateEmbedding(state: any) {
     console.log('Generating embedding for question:', state.question);
-    const embedding = await getEmbeddings(state.question);
-    const paddedEmbedding = padEmbedding(embedding, VECTOR_DIMENSION);
+    const embedding = await memoryService.generateEmbedding(state.question);
 
     return {
-        embedding: paddedEmbedding,
+        embedding,
     };
 }
 
 export async function searchMemories(state: any) {
     console.log('Searching for memories...');
-    const memories = await searchQdrant(
-        state.embedding,
+    const memories = await memoryService.searchMemories(
+        state.question,
         state.userId,
         state.chatId
     );
@@ -234,33 +227,7 @@ ${contentToSummarize.substring(0, 10000)}`;
         state.memories.results &&
         state.memories.results.length > 0
     ) {
-        // Collect all mem0_responses
-        const mem0Responses = state.memories.results
-            .map(
-                (m: { metadata: { mem0_response: string } }) =>
-                    m.metadata.mem0_response
-            )
-            .filter((response: string) => response && response.length > 0);
-
-        // Then collect conversation history
-        const conversationHistory = state.memories.results
-            .map((memory: { memory: string }) => memory.memory)
-            .filter((memory: string) => memory && memory.length > 0);
-
-        // Build the context string
-        const contextParts = [];
-
-        if (mem0Responses.length > 0) {
-            contextParts.push('User Context:\n' + mem0Responses.join('\n'));
-        }
-
-        if (conversationHistory.length > 0) {
-            contextParts.push(
-                'Conversation History:\n' + conversationHistory.join('\n\n')
-            );
-        }
-
-        context = contextParts.join('\n\n');
+        context = memoryService.buildMemoryContext(state.memories);
         console.log('Built context:', context);
     }
 
@@ -321,89 +288,17 @@ export async function getLLMResponse(
 }
 
 export async function addMemory(state: any, appId: string) {
-    console.log('Adding to memory...');
-
-    // Skip if no response (shouldn't happen)
-    if (!state.response) {
-        console.log('No response to store in memory');
-        return {};
-    }
-
-    // Generate embedding for the full conversation
-    const embedding = await getEmbeddings(
-        state.question + ' ' + state.response
-    );
-    const paddedEmbedding = padEmbedding(embedding, VECTOR_DIMENSION);
-
-    // For mem0, we'll use a truncated version if needed
-    console.log('Calling mem0 with:', {
-        question: state.question,
-        response:
-            state.response.length > 1500
-                ? 'truncated response...'
-                : state.response,
-        userId: state.userId,
-    });
-
-    const mem0Response = await addToMem0(
-        state.question,
-        state.response,
-        state.userId,
-        state.chatId
-    );
-
-    // Extract memory from mem0 response
-    let extractedMemory = '';
-    if (
-        mem0Response &&
-        Array.isArray(mem0Response) &&
-        mem0Response.length > 0
-    ) {
-        extractedMemory = mem0Response
-            .map((m: any) => m.data && m.data.memory)
-            .filter((content: string) => content && content.length > 0)
-            .join('\n');
-    }
-
-    console.log(
-        'Extracted mem0 memory:',
-        extractedMemory || 'No memory extracted'
-    );
-
-    // Store in Qdrant with full response
-    const payload = {
-        question: state.question,
-        response: state.response,
-        userId: state.userId,
-        appId: appId,
-        timestamp: new Date().toISOString(),
-        mem0_response: extractedMemory,
-        chat_id: state.chatId,
-        chat_name: state.chatName,
-    };
-
-    console.log('Original payload received by Qdrant:', payload);
-
-    // Clean and truncate fields for Qdrant if needed
-    const cleanedPayload = {
-        ...payload,
-        response:
-            payload.response.length > 8000
-                ? payload.response.substring(0, 8000) + '... (truncated)'
-                : payload.response,
-        mem0_response:
-            payload.mem0_response.length > 1000
-                ? payload.mem0_response.substring(0, 1000) + '... (truncated)'
-                : payload.mem0_response,
-    };
-
-    console.log('Cleaned payload for Qdrant:', cleanedPayload);
-
     try {
-        await addToQdrant(paddedEmbedding, cleanedPayload);
+        await memoryService.storeMemory(
+            state.question,
+            state.response,
+            state.userId,
+            state.chatId,
+            state.chatName
+        );
         return {};
     } catch (error) {
-        console.error('Error adding to Qdrant:', error);
+        console.error('Error adding to memory:', error);
         return {};
     }
 }

@@ -1,5 +1,4 @@
 import { spawn, ChildProcess } from 'child_process';
-import { addToMem0 } from '../services/mem0_service.js';
 
 interface JsonRpcRequest {
     jsonrpc: '2.0';
@@ -219,25 +218,8 @@ export class TavilyMCPClient {
                 .map((r: SearchResult) => `${r.title}\n${r.content}`)
                 .join('\n\n');
 
-            try {
-                addToMem0(
-                    this.query,
-                    formattedResponse,
-                    this.userId,
-                    this.chatId
-                ).catch((error) => {
-                    console.error(
-                        'Error storing search results in mem0:',
-                        error
-                    );
-                });
-                this.cleanup(true);
-                resolve({ content: formattedResponse, already_stored: true });
-            } catch (error) {
-                console.error('Error storing search results:', error);
-                this.cleanup(true);
-                resolve({ content: formattedResponse, already_stored: false });
-            }
+            this.cleanup(true);
+            resolve({ content: formattedResponse });
         } else {
             this.cleanup(true);
             resolve(searchResult);
