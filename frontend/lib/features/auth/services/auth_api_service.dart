@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../common/utils/shared_preferences.dart';
 import '../../../core/consts.dart';
 import '../models/auth_request.dart';
 
@@ -71,5 +73,14 @@ class AuthApiService {
       log('Registration error: $e');
       return AuthResponse.failure('Registration error: $e');
     }
+  }
+
+  Future<String?> getUserIdFromToken() async {
+    final String? tokenJson = await getSavedJwtToken();
+    if (tokenJson == null) return null;
+
+    final jwt = JWT.decode(tokenJson);
+
+    return jwt.payload['id'] as String?;
   }
 }

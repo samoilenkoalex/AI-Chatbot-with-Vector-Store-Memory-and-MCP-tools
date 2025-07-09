@@ -1,6 +1,6 @@
+import '../../../common/utils/shared_preferences.dart';
 import '../models/auth_request.dart';
 import '../services/auth_api_service.dart';
-import '../../../common/utils/shared_preferences.dart';
 
 abstract class AuthRepository {
   final AuthApiService authApiService;
@@ -11,6 +11,7 @@ abstract class AuthRepository {
   Future<AuthResponse> register(AuthRequest request);
   Future<void> logout();
   Future<String?> getToken();
+  Future<String?> getUserId();
 }
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -47,5 +48,10 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<String?> getToken() {
     return getSavedJwtToken();
+  }
+
+  @override
+  Future<String?> getUserId() {
+    return authApiService.getUserIdFromToken();
   }
 }

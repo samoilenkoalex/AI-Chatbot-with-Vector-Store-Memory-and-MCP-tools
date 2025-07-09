@@ -56,4 +56,8 @@ class AuthCubit extends Cubit<AuthState> {
     authRepository.logout();
     emit(const AuthUnauthenticated());
   }
+
+  Future<String?> getUserId() {
+    return authRepository.getUserId();
+  }
 }
