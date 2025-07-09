@@ -61,8 +61,14 @@ final goRouter = GoRouter(
           name: 'chat',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
-            return ChatScreen(chatId: id);
-            // return ChatScreen();
+            final extra = state.extra as Map<dynamic, dynamic>?;
+            final chatName = (extra != null &&
+                    extra['name'] != null &&
+                    extra['name'] is String &&
+                    (extra['name'] as String).isNotEmpty)
+                ? extra['name'] as String
+                : null;
+            return ChatScreen(chatId: id, chatName: chatName);
           },
         ),
         GoRoute(
@@ -71,9 +77,14 @@ final goRouter = GoRouter(
           builder: (context, state) {
             final roomUrl = state.pathParameters['roomUrl'] ?? '';
             final token = state.pathParameters['token'] ?? '';
+            final chatId = state.pathParameters['chatId'] ?? '';
+            final chatName = state.pathParameters['chatId'] ?? '';
+
             return VoiceChatScreen(
               roomUrl: roomUrl,
               token: token,
+              chatId: chatId,
+              chatName: chatName,
             );
           },
         ),

@@ -6,6 +6,8 @@ import '../features/auth/repositories/auth_repository.dart';
 import '../features/auth/services/auth_api_service.dart';
 import '../features/chat/repository/chat_repository.dart';
 import '../features/chat/services/chat_service.dart';
+import '../features/livekit/repository/livekit_repository.dart';
+import '../features/livekit/services/livekit_service.dart';
 
 class RepositoriesHolder extends StatelessWidget {
   final Widget child;
@@ -19,6 +21,7 @@ class RepositoriesHolder extends StatelessWidget {
   Widget build(BuildContext context) {
     final AuthApiService authApiService = GetIt.I<AuthApiService>();
     final ChatApiService chatApiService = GetIt.I<ChatApiService>();
+    final LiveKitService liveKitService = GetIt.I<LiveKitService>();
 
     return MultiRepositoryProvider(
       providers: [
@@ -30,6 +33,11 @@ class RepositoriesHolder extends StatelessWidget {
         RepositoryProvider<ChatRepository>(
           create: (context) => ChatRepositoryImpl(
             chatApiService: chatApiService,
+          ),
+        ),
+        RepositoryProvider<LiveKitRepository>(
+          create: (context) => LiveKitRepositoryImpl(
+            service: liveKitService,
           ),
         ),
       ],

@@ -5,6 +5,8 @@ import '../features/auth/cubit/auth_cubit.dart';
 import '../features/auth/repositories/auth_repository.dart';
 import '../features/chat/cubit/chat_cubit.dart';
 import '../features/chat/repository/chat_repository.dart';
+import '../features/livekit/cubit/livekit_cubit.dart';
+import '../features/livekit/repository/livekit_repository.dart';
 
 class GlobalBlocProvider extends StatelessWidget {
   final Widget child;
@@ -26,6 +28,11 @@ class GlobalBlocProvider extends StatelessWidget {
         BlocProvider(
           create: (context) => ChatCubit(
             repository: context.read<ChatRepository>(),
+          ),
+        ),
+        BlocProvider(
+          create: (context) => LiveKitCubit(
+            repository: context.read<LiveKitRepository>(),
           ),
         ),
       ],
