@@ -47,14 +47,26 @@ export class FirecrawlMCPClient {
                                 if (
                                     typeof message.result.content === 'string'
                                 ) {
-                                    result = message.result.content;
+                                    result = this.cleanContent(
+                                        message.result.content
+                                    );
                                 } else if (
                                     Array.isArray(message.result.content)
                                 ) {
                                     result = message.result.content
-                                        .map((item: unknown) =>
-                                            JSON.stringify(item)
-                                        )
+                                        .map((item: any) => {
+                                            if (typeof item === 'string') {
+                                                return this.cleanContent(item);
+                                            } else if (
+                                                item.type === 'text' &&
+                                                item.text
+                                            ) {
+                                                return this.cleanContent(
+                                                    item.text
+                                                );
+                                            }
+                                            return JSON.stringify(item);
+                                        })
                                         .join('\n');
                                 }
                                 cleanup();
@@ -139,6 +151,31 @@ export class FirecrawlMCPClient {
                 reject(new Error('Operation timed out'));
             }, 30000);
         });
+    }
+
+    private cleanContent(content: string): string {
+        // Parse JSON if it's wrapped in JSON
+        try {
+            const parsed = JSON.parse(content);
+            if (parsed.type === 'text' && parsed.text) {
+                content = parsed.text;
+            }
+        } catch (e) {
+            // If it's not JSON, use the content as-is
+        }
+
+        // Clean up escaped characters and formatting
+        return content
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\u[\da-fA-F]{4}/g, (match) => {
+                return String.fromCharCode(
+                    parseInt(match.replace('\\u', ''), 16)
+                );
+            })
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .trim();
     }
 
     private sendRequest(server: any) {
