@@ -6,6 +6,7 @@ import {
     EMBEDDING_MODEL,
     APP_ID,
 } from '../config/config.js';
+import { MEM0_EXTRACTION_PROMPT } from '../config/prompts.js';
 
 console.log('Debug - Environment variables:');
 console.log('MEM0_API_KEY:', MEM0_API_KEY ? 'Set' : 'Not set');
@@ -13,47 +14,31 @@ console.log('MEM0_API_KEY:', MEM0_API_KEY ? 'Set' : 'Not set');
 export const memory = new Memory({
     apiKey: MEM0_API_KEY,
     llm: {
-        provider: 'custom',
+        provider: 'ollama',
         config: {
-            endpoint: `${OLLAMA_BASE_URL}/api/chat`,
             model: LLM_MODEL,
+            ollama_base_url: '${OLLAMA_BASE_URL}/api/chat',
+
+            temperature: 0.1,
+            max_tokens: 1000,
         },
     },
     embedder: {
-        provider: 'custom',
+        provider: 'ollama',
         config: {
-            endpoint: `${OLLAMA_BASE_URL}/api/embeddings`,
             model: EMBEDDING_MODEL,
+            ollama_base_url: `${OLLAMA_BASE_URL}/api/embeddings`,
         },
     },
-    customPrompt: `
-    Please only extract entities containing patient health information, appointment details, and user information. 
-    Here are some few shot examples:
-
-    Input: Hi.
-    Output: {{"facts" : []}}
-
-    Input: The weather is nice today.
-    Output: {{"facts" : []}}
-
-    Input: I have a headache and would like to schedule an appointment.
-    Output: {{"facts" : ["Patient reports headache", "Wants to schedule an appointment"]}}
-
-    Input: My name is Jane Smith, and I need to reschedule my appointment for next Tuesday.
-    Output: {{"facts" : ["Patient name: Jane Smith", "Wants to reschedule appointment", "Original appointment: next Tuesday"]}}
-
-    Input: I have diabetes and my blood sugar is high.
-    Output: {{"facts" : ["Patient has diabetes", "Reports high blood sugar"]}}
-
-    Return the facts and patient information in a json format as shown above.
-    `,
+    customPrompt: MEM0_EXTRACTION_PROMPT,
     version: 'v1.1',
 } as any);
 
 export async function addToMem0(
     question: string,
     response: string,
-    userId: string | undefined
+    userId: string | undefined,
+    chatId: string | undefined
 ): Promise<any> {
     try {
         const maxMetaLength = 1800;
@@ -66,7 +51,6 @@ export async function addToMem0(
         let metaStr = JSON.stringify(metadata);
         // Trim response until metadata fits
         while (metaStr.length > maxMetaLength && trimmedResponse.length > 0) {
-            // Remove 100 more chars each time
             trimmedResponse =
                 trimmedResponse.substring(0, trimmedResponse.length - 100) +
                 '... (truncated)';
@@ -109,7 +93,7 @@ export async function addToMem0(
         ];
         const mem0Response = await memory.add(messages, {
             version: 'v2',
-            user_id: userId || 'default-user',
+            user_id: chatId || 'default-user',
             app_id: APP_ID,
             metadata,
         });
