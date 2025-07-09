@@ -9,8 +9,13 @@ class ChatMessage extends Equatable {
     required this.content,
   });
 
+  bool get isUser => role == 'user';
+
   @override
-  List<Object?> get props => [role, content];
+  List<Object?> get props => [
+        role,
+        content,
+      ];
 
   Map<String, String> toMap() => {
         'role': role,
@@ -21,4 +26,18 @@ class ChatMessage extends Equatable {
         role: map['type'] ?? map['role'] ?? 'unknown',
         content: map['content'] ?? '',
       );
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      role: json['role'] as String,
+      content: json['content'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'content': content,
+      'role': role,
+    };
+  }
 }

@@ -62,9 +62,9 @@ class ChatCubit extends Cubit<ChatState> {
   }
 
   void sendMessage(String message, {String? chatId, String? chatName}) async {
+    log('Sending message: $chatName');
     if (message.trim().isEmpty) return;
 
-    // Add user message
     final messages = List<ChatMessage>.from(state.messages)
       ..add(ChatMessage(role: 'user', content: message));
 

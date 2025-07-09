@@ -1,6 +1,6 @@
-import '../models/chat_request.dart';
+import '../../livekit/models/chat_item.dart';
 import '../models/chat_message.dart';
-import '../models/chat_item.dart';
+import '../models/chat_request.dart';
 import '../services/chat_service.dart';
 
 abstract class ChatRepository {

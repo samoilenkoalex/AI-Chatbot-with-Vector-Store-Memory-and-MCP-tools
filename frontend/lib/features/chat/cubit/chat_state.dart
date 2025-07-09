@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
+
+import '../../livekit/models/chat_item.dart';
 import '../models/chat_message.dart';
-import '../models/chat_item.dart';
 
 enum ChatStatus { initial, loading, success, error }
 
@@ -50,6 +51,5 @@ class ChatState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [messages, chatItems, chatItemsStatus, chatHistoryStatus, errorMessage];
+  List<Object?> get props => [messages, chatItems, chatItemsStatus, chatHistoryStatus, errorMessage];
 }

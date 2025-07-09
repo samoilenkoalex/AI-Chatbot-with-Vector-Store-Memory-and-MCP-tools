@@ -1,10 +1,16 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../common/snackbars/snackbars.dart';
 import '../../../common/utils/shared_preferences.dart';
 import '../../../core/consts.dart';
+import '../../auth/cubit/auth_cubit.dart';
+import '../../livekit/cubit/livekit_cubit.dart';
+import '../cubit/chat_cubit.dart';
 import '../models/chat_message.dart';
 import '../models/chat_request.dart';
 
@@ -85,5 +91,75 @@ ChatMessage handleSuccessResponse(String responseBody) {
       role: 'error',
       content: 'Failed to parse response: $e',
     );
+  }
+}
+
+void sendMessage(BuildContext context,
+    {required TextEditingController messageController,
+    required ScrollController scrollController,
+    String? chatId,
+    String? chatName}) {
+  final message = messageController.text;
+  final chatCubit = context.read<ChatCubit>();
+  if (message.trim().isNotEmpty) {
+    try {
+      // final chatId = chatId ?? uniqueId;
+      // final isNewChat = chatId == null;
+      final isFirstMessage = chatCubit.state.messages.isEmpty;
+      log('Sending message>>>: ${chatName}');
+
+      chatCubit.sendMessage(
+        message,
+        chatId: chatId,
+        chatName: chatName == null && isFirstMessage ? message : null,
+      );
+      messageController.clear();
+
+      // Scroll to bottom after sending message
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (scrollController.hasClients) {
+          scrollController.animateTo(
+            scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (e) {
+      log('Error sending message: $e');
+      showSnackBar(context, message: 'Error sending message: $e', isError: true);
+    }
+  }
+}
+
+Future<void> startVoiceChat({
+  required BuildContext context,
+  required String? chatId,
+  required String uniqueId,
+  required String? chatName,
+}) async {
+  try {
+    final authCubit = context.read<AuthCubit>();
+    final authToken = await getSavedJwtToken();
+    final userId = await authCubit.getUserId();
+
+    if (userId == null || authToken == null) {
+      if (context.mounted) {
+        showSnackBar(context, message: 'Not authenticated. Please log in again.', isError: true);
+      }
+      return;
+    }
+
+    final finalChatId = chatId ?? uniqueId;
+
+    context.read<LiveKitCubit>().startVoiceChat(
+          userId: userId,
+          chatId: finalChatId,
+          authToken: authToken,
+          chatName: chatName,
+        );
+  } catch (e) {
+    log('Error starting voice chat: $e');
+    showSnackBar(context, message: 'Error starting voice chat: $e', isError: true);
   }
 }

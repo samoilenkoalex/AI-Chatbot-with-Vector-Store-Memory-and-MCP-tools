@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../common/utils/shared_preferences.dart';
 import '../../../core/consts.dart';
-import '../models/chat_item.dart';
+import '../../livekit/models/chat_item.dart';
 import '../models/chat_message.dart';
 import '../models/chat_request.dart';
 import '../utils/chat_helpers.dart';
@@ -45,39 +45,6 @@ class ChatApiService {
       );
     } finally {
       client.close();
-    }
-  }
-
-  Future<Map<String, dynamic>> searchMemory(String query) async {
-    final authToken = await getSavedJwtToken();
-
-    if (authToken == null || authToken.isEmpty) {
-      throw Exception('Not authenticated. Please log in.');
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/chat/search-memory'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: jsonEncode({'query': query}),
-      );
-
-      if (response.statusCode != 200) {
-        if (response.statusCode == 401) {
-          throw Exception('Authentication failed. Please log in again.');
-        }
-
-        final errorBody = jsonDecode(response.body);
-        throw Exception(errorBody['message'] ?? 'Failed to search memory: ${response.statusCode}');
-      }
-
-      return jsonDecode(response.body);
-    } catch (e) {
-      log('Error searching memory: $e');
-      rethrow;
     }
   }
 
