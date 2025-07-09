@@ -17,6 +17,8 @@ dependencies:
     shared_preferences: ^2.2.2
     provider: ^6.1.1
     livekit_client: ^2.4.8
+    livekit_components: ^1.2.2+hotfix.1
+    chat_bubbles: ^1.5.0
     permission_handler: ^12.0.0+1
     flutter_webrtc: ^0.14.1
     flutter_bloc: ^8.1.3
@@ -24,6 +26,10 @@ dependencies:
     get_it: ^8.0.3
     go_router: ^15.2.4
     uuid: ^4.3.3
+    web_socket_channel: ^2.4.0
+    json_annotation: ^4.8.1
+    dart_jsonwebtoken: ^3.2.0
+#    flutter_dotenv: ^5.2.1
 
 dev_dependencies:
     flutter_test:
