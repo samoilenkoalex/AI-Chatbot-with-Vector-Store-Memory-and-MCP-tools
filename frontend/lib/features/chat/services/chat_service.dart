@@ -13,7 +13,7 @@ import '../utils/chat_helpers.dart';
 class ChatApiService {
   ChatApiService();
 
-  Stream<ChatMessage> streamChat(ChatRequest llmRequest) async* {
+  Stream<ChatMessage> streamChat(ChatRequest chatRequest) async* {
     final authToken = await getAuthToken();
     if (authToken == null) {
       yield const ChatMessage(
@@ -25,7 +25,8 @@ class ChatApiService {
 
     final client = http.Client();
     try {
-      final request = createChatRequest(authToken, llmRequest);
+      log('Streaming chat... request: $chatRequest');
+      final request = createChatRequest(authToken, chatRequest);
       final response = await client.send(request);
       log('Response status code: ${response.statusCode}');
 

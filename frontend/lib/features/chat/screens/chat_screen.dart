@@ -1,12 +1,9 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../common/snackbars/snackbars.dart';
-import '../../../common/utils/shared_preferences.dart';
 import '../../../core/styles.dart';
 import '../../../screens/voice_chat_screen.dart';
 import '../../auth/cubit/auth_cubit.dart';
@@ -86,7 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     roomUrl: state.roomUrl,
                     token: state.token,
                     chatId: chatId,
-                    chatName: widget.chatName != null ? null : 'Voice Chat',
+                    chatName: null,
                   ),
                 ),
               );
@@ -105,17 +102,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 const TextSpan(
                   text: 'Chat: ',
                   style: TextStyle(
-                      color: AppStyles.textDark,
-                      fontWeight: FontWeight.bold,
-                      fontSize: AppStyles.fontSizeLarge),
+                      color: AppStyles.textDark, fontWeight: FontWeight.bold, fontSize: AppStyles.fontSizeLarge),
                 ),
                 TextSpan(
-                  text: widget.chatName != null
-                      ? '${widget.chatName}'
-                      : 'New Chat',
-                  style: const TextStyle(
-                      color: AppStyles.textDark,
-                      fontSize: AppStyles.fontSizeLarge),
+                  text: widget.chatName != null ? '${widget.chatName}' : 'New Chat',
+                  style: const TextStyle(color: AppStyles.textDark, fontSize: AppStyles.fontSizeLarge),
                 ),
               ],
             ),
@@ -159,8 +150,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         )
                       : ListView.builder(
                           controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppStyles.paddingSmall),
+                          padding: const EdgeInsets.symmetric(vertical: AppStyles.paddingSmall),
                           itemCount: state.messages.length,
                           itemBuilder: (context, index) {
                             final message = state.messages[index];
@@ -171,8 +161,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (state.chatHistoryStatus == ChatStatus.loading)
                   const LinearProgressIndicator(
                     backgroundColor: Colors.transparent,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppStyles.primaryPurple),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppStyles.primaryPurple),
                   ),
                 Container(
                   decoration: BoxDecoration(
@@ -192,8 +181,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppStyles.inputBackground,
-                            borderRadius: BorderRadius.circular(
-                                AppStyles.borderRadiusMedium),
+                            borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
                           ),
                           child: ChatInputWidget(
                             messageController: _messageController,
@@ -208,8 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       Container(
                         decoration: BoxDecoration(
                           color: AppStyles.primaryPurple,
-                          borderRadius: BorderRadius.circular(
-                              AppStyles.borderRadiusMedium),
+                          borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
                         ),
                         child: IconButton(
                           icon: const Icon(Icons.send, color: Colors.white),
@@ -228,8 +215,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       Container(
                         decoration: BoxDecoration(
                           color: AppStyles.primaryPurple,
-                          borderRadius: BorderRadius.circular(
-                              AppStyles.borderRadiusMedium),
+                          borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
                         ),
                         child: BlocBuilder<LiveKitCubit, LiveKitState>(
                           builder: (context, state) {
@@ -248,8 +234,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               icon: const Icon(Icons.mic, color: Colors.white),
                               onPressed: () => startVoiceChat(
                                 context: context,
-                                chatId: widget.chatId,
-                                uniqueId: uniqueId,
+                                chatId: widget.chatId ?? uniqueId,
+                                // uniqueId: uniqueId,
                                 chatName: widget.chatName,
                               ),
                             );

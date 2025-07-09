@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:frontend/common/router.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
+import '../core/styles.dart';
 import '../features/auth/cubit/auth_cubit.dart';
 import '../features/chat/cubit/chat_cubit.dart';
 import '../features/chat/cubit/chat_state.dart';
@@ -36,38 +37,53 @@ class _SidebarLayoutState extends State<SidebarLayout> {
             Container(
               width: 280,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: AppStyles.formBackground,
                 border: Border(
                   right: BorderSide(
-                    color: Theme.of(context).dividerColor,
+                    color: Colors.black.withOpacity(0.05),
                   ),
                 ),
+                boxShadow: [AppStyles.messageShadow],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppStyles.paddingSmall),
                   // New Chat Button
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: AppStyles.paddingSmall),
                     child: ElevatedButton.icon(
-                      onPressed: () => context.go(newChatRoute),
+                      onPressed: () {
+                        final newId = const Uuid().v4();
+                        context.go('/chat/$newId');
+                      },
                       icon: const Icon(Icons.add),
                       label: const Text('New Chat'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppStyles.paddingSmall),
+                        backgroundColor: AppStyles.primaryPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: AppStyles.fontSizeMedium,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        elevation: 0,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppStyles.paddingMedium),
                   // Recent Chats Header
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: EdgeInsets.symmetric(horizontal: AppStyles.paddingSmall),
                     child: Text(
                       'Recent Chats',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: AppStyles.fontSizeMedium,
                         fontWeight: FontWeight.bold,
+                        color: AppStyles.textDark,
                       ),
                     ),
                   ),
@@ -77,8 +93,7 @@ class _SidebarLayoutState extends State<SidebarLayout> {
                     child: BlocBuilder<ChatCubit, ChatState>(
                       builder: (context, state) {
                         if (state.chatItemsStatus == ChatStatus.loading) {
-                          return const Center(
-                              child: CircularProgressIndicator());
+                          return const Center(child: CircularProgressIndicator());
                         }
 
                         if (state.chatItemsStatus == ChatStatus.error) {
@@ -86,11 +101,22 @@ class _SidebarLayoutState extends State<SidebarLayout> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Error: ${state.errorMessage}'),
+                                const Text('Error: {state.errorMessage}', style: TextStyle(color: Colors.red)),
                                 const SizedBox(height: 8),
                                 ElevatedButton(
-                                  onPressed: () =>
-                                      context.read<ChatCubit>().loadChatItems(),
+                                  onPressed: () => context.read<ChatCubit>().loadChatItems(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppStyles.primaryPurple,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
+                                    ),
+                                    textStyle: const TextStyle(
+                                      fontSize: AppStyles.fontSizeMedium,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    elevation: 0,
+                                  ),
                                   child: const Text('Retry'),
                                 ),
                               ],
@@ -100,15 +126,14 @@ class _SidebarLayoutState extends State<SidebarLayout> {
 
                         if (state.chatItems.isEmpty) {
                           return const Center(
-                            child: Text('No chats yet'),
+                            child: Text('No chats yet', style: TextStyle(color: AppStyles.textLight)),
                           );
                         }
 
                         return RefreshIndicator(
-                          onRefresh: () =>
-                              context.read<ChatCubit>().loadChatItems(),
+                          onRefresh: () => context.read<ChatCubit>().loadChatItems(),
                           child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: AppStyles.paddingSmall),
                             itemCount: state.chatItems.length,
                             itemBuilder: (context, index) {
                               final chat = state.chatItems[index];
@@ -126,9 +151,12 @@ class _SidebarLayoutState extends State<SidebarLayout> {
                   const Divider(height: 1),
                   // Logout Button
                   ListTile(
-                    leading: const Icon(Icons.logout),
-                    title: const Text('Logout'),
+                    leading: const Icon(Icons.logout, color: AppStyles.textLight),
+                    title: const Text('Logout', style: TextStyle(color: AppStyles.textLight)),
                     onTap: () => context.read<AuthCubit>().logout(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
+                    ),
                   ),
                 ],
               ),
@@ -146,7 +174,7 @@ class _SidebarLayoutState extends State<SidebarLayout> {
     );
   }
 
-  Widget _buildChatTile(BuildContext context, String id, String title) {
+  Widget _buildChatTile(BuildContext context, String id, String? title) {
     final currentLocation = GoRouterState.of(context).matchedLocation;
     final isSelected = currentLocation == '/chat/$id';
 
@@ -155,28 +183,26 @@ class _SidebarLayoutState extends State<SidebarLayout> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? AppStyles.primaryPurple.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
         ),
         child: ListTile(
-          leading: const Icon(Icons.chat_bubble_outline),
+          leading: Icon(Icons.chat_bubble_outline, color: isSelected ? AppStyles.primaryPurple : AppStyles.textLight),
           title: Text(
-            title,
+            title ?? 'New Chat',
             style: TextStyle(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimaryContainer
-                  : null,
+              color: isSelected ? AppStyles.primaryPurple : AppStyles.textDark,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           selected: isSelected,
-          onTap: () => context.go('/chat/$id'),
+          onTap: () {
+            context.go('/chat/$id', extra: {'name': title});
+          },
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppStyles.borderRadiusMedium),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         ),
       ),
     );

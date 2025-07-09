@@ -134,8 +134,7 @@ void sendMessage(BuildContext context,
 
 Future<void> startVoiceChat({
   required BuildContext context,
-  required String? chatId,
-  required String uniqueId,
+  required String chatId,
   required String? chatName,
 }) async {
   try {
@@ -150,11 +149,9 @@ Future<void> startVoiceChat({
       return;
     }
 
-    final finalChatId = chatId ?? uniqueId;
-
     context.read<LiveKitCubit>().startVoiceChat(
           userId: userId,
-          chatId: finalChatId,
+          chatId: chatId,
           authToken: authToken,
           chatName: chatName,
         );
