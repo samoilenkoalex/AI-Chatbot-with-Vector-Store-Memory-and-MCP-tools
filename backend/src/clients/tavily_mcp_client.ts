@@ -19,7 +19,11 @@ export class TavilyMCPClient {
     private searchSent = false;
     private errorOccurred = false;
 
-    constructor(private query: string) {}
+    constructor(
+        private query: string,
+        private userId?: string,
+        private chatId?: string
+    ) {}
 
     async search(): Promise<any> {
         return new Promise((resolve, reject) => {
@@ -119,8 +123,52 @@ export class TavilyMCPClient {
         this.server.stdin?.write(JSON.stringify(listToolsRequest) + '\n');
     }
 
+    private detectSearchTopic(query: string): 'general' | 'news' {
+        const newsKeywords = [
+            'news',
+            'latest',
+            'recent',
+            'updates',
+            'announcement',
+            'release',
+            'flutter',
+            'tech',
+            'programming',
+            'development',
+            'software',
+            'ai',
+            'machine learning',
+        ];
+        const lowercaseQuery = query.toLowerCase();
+
+        return newsKeywords.some((keyword) => lowercaseQuery.includes(keyword))
+            ? 'news'
+            : 'general';
+    }
+
+    private optimizeQuery(query: string): string {
+        // Remove conversational words that might confuse the search
+        const cleanQuery = query
+            .replace(/^what are the latest news about /i, '')
+            .replace(/^latest news about /i, '')
+            .replace(/^news about /i, '')
+            .replace(/^what is /i, '')
+            .replace(/^tell me about /i, '')
+            .trim();
+
+        // Add relevant keywords for better search results
+        if (cleanQuery.toLowerCase().includes('flutter')) {
+            return `${cleanQuery} news updates 2025`;
+        }
+
+        return cleanQuery;
+    }
+
     private sendSearchRequest(): void {
         this.searchSent = true;
+        const optimizedQuery = this.optimizeQuery(this.query);
+        const searchTopic = this.detectSearchTopic(this.query);
+
         const searchRequest: JsonRpcRequest = {
             jsonrpc: '2.0',
             id: 1,
@@ -128,14 +176,13 @@ export class TavilyMCPClient {
             params: {
                 name: 'tavily-search',
                 arguments: {
-                    query: this.query,
+                    query: optimizedQuery,
                     search_depth: 'basic',
                     include_answer: true,
                     include_raw_content: false,
                     include_images: false,
-                    topic: 'general',
-                    max_results: 5,
-                    time_range: 'day',
+                    max_results: 3,
+                    time_range: searchTopic === 'news' ? 'week' : 'month',
                 },
             },
         };
@@ -173,7 +220,17 @@ export class TavilyMCPClient {
                 .join('\n\n');
 
             try {
-                await addToMem0(this.query, formattedResponse, undefined);
+                addToMem0(
+                    this.query,
+                    formattedResponse,
+                    this.userId,
+                    this.chatId
+                ).catch((error) => {
+                    console.error(
+                        'Error storing search results in mem0:',
+                        error
+                    );
+                });
                 this.cleanup(true);
                 resolve({ content: formattedResponse, already_stored: true });
             } catch (error) {

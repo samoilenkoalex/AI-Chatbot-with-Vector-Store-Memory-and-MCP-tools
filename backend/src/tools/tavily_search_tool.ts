@@ -8,9 +8,19 @@ export const tavilySearchTool = new DynamicStructuredTool({
     schema: z.object({
         query: z.string().describe('The search query to look up'),
     }),
-    func: async ({ query }: { query: string }) => {
+    func: async ({ query }: { query: string }, runManager?: any) => {
         try {
-            const client = new TavilyMCPClient(query);
+            const state = runManager?.getState();
+            const userId = state?.userId;
+            const chatId = state?.chatId;
+
+            console.log(
+                'Tavily search with userId:',
+                userId,
+                'chatId:',
+                chatId
+            );
+            const client = new TavilyMCPClient(query, userId, chatId);
             return await client.search();
         } catch (error: any) {
             console.error('Tavily search failed:', error);
