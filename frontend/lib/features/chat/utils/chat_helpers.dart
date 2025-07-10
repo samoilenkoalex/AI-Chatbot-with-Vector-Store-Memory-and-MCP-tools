@@ -73,7 +73,8 @@ ChatMessage handleSuccessResponse(String responseBody) {
 
   try {
     final jsonResponse = jsonDecode(responseBody);
-    if (jsonResponse['messages'] != null && jsonResponse['messages'].isNotEmpty) {
+    if (jsonResponse['messages'] != null &&
+        jsonResponse['messages'].isNotEmpty) {
       final message = jsonResponse['messages'][0];
       return ChatMessage(
         role: 'assistant',
@@ -103,10 +104,7 @@ void sendMessage(BuildContext context,
   final chatCubit = context.read<ChatCubit>();
   if (message.trim().isNotEmpty) {
     try {
-      // final chatId = chatId ?? uniqueId;
-      // final isNewChat = chatId == null;
       final isFirstMessage = chatCubit.state.messages.isEmpty;
-      log('Sending message>>>: ${chatName}');
 
       chatCubit.sendMessage(
         message,
@@ -127,7 +125,8 @@ void sendMessage(BuildContext context,
       });
     } catch (e) {
       log('Error sending message: $e');
-      showSnackBar(context, message: 'Error sending message: $e', isError: true);
+      showSnackBar(context,
+          message: 'Error sending message: $e', isError: true);
     }
   }
 }
@@ -144,19 +143,25 @@ Future<void> startVoiceChat({
 
     if (userId == null || authToken == null) {
       if (context.mounted) {
-        showSnackBar(context, message: 'Not authenticated. Please log in again.', isError: true);
+        showSnackBar(context,
+            message: 'Not authenticated. Please log in again.', isError: true);
       }
       return;
     }
 
-    context.read<LiveKitCubit>().startVoiceChat(
-          userId: userId,
-          chatId: chatId,
-          authToken: authToken,
-          chatName: chatName,
-        );
+    if (context.mounted) {
+      context.read<LiveKitCubit>().startVoiceChat(
+            userId: userId,
+            chatId: chatId,
+            authToken: authToken,
+            chatName: chatName,
+          );
+    }
   } catch (e) {
     log('Error starting voice chat: $e');
-    showSnackBar(context, message: 'Error starting voice chat: $e', isError: true);
+    if (context.mounted) {
+      showSnackBar(context,
+          message: 'Error starting voice chat: $e', isError: true);
+    }
   }
 }

@@ -51,5 +51,6 @@ class ChatState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [messages, chatItems, chatItemsStatus, chatHistoryStatus, errorMessage];
+  List<Object?> get props =>
+      [messages, chatItems, chatItemsStatus, chatHistoryStatus, errorMessage];
 }
