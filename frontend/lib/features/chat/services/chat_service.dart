@@ -13,34 +13,32 @@ import '../utils/chat_helpers.dart';
 class ChatApiService {
   ChatApiService();
 
-  Stream<ChatMessage> streamChat(ChatRequest chatRequest) async* {
+  Future<ChatMessage> sendChat(ChatRequest chatRequest) async {
     final authToken = await getAuthToken();
     if (authToken == null) {
-      yield const ChatMessage(
+      return const ChatMessage(
         role: 'error',
         content: 'Not authenticated. Please log in.',
       );
-      return;
     }
 
     final client = http.Client();
     try {
-      log('Streaming chat... request: $chatRequest');
+      log('Sending chat... request: $chatRequest');
       final request = createChatRequest(authToken, chatRequest);
       final response = await client.send(request);
       log('Response status code: ${response.statusCode}');
 
       if (response.statusCode != 200) {
         final errorBody = await response.stream.bytesToString();
-        yield handleErrorResponse(response.statusCode, errorBody);
-        return;
+        return handleErrorResponse(response.statusCode, errorBody);
       }
 
       final responseBody = await response.stream.bytesToString();
-      yield handleSuccessResponse(responseBody);
+      return handleSuccessResponse(responseBody);
     } catch (e) {
-      log('Error in streamChat: $e');
-      yield ChatMessage(
+      log('Error in sendChat: $e');
+      return ChatMessage(
         role: 'error',
         content: 'Error: $e',
       );
@@ -57,7 +55,9 @@ class ChatApiService {
     }
 
     try {
-      final url = chatId != null ? '$baseUrl/api/chat/current?chatId=$chatId' : '$baseUrl/api/chat/current';
+      final url = chatId != null
+          ? '$baseUrl/api/chat/current?chatId=$chatId'
+          : '$baseUrl/api/chat/current';
 
       log('Fetching chat history from: $url');
       log('Using auth token: $authToken');
@@ -79,7 +79,8 @@ class ChatApiService {
         }
 
         final errorBody = response.body;
-        throw Exception('Failed to fetch chat history: ${response.statusCode}\nResponse: $errorBody');
+        throw Exception(
+            'Failed to fetch chat history: ${response.statusCode}\nResponse: $errorBody');
       }
 
       try {
@@ -127,7 +128,8 @@ class ChatApiService {
         }
 
         final errorBody = jsonDecode(response.body);
-        throw Exception(errorBody['error'] ?? 'Failed to fetch chat items: ${response.statusCode}');
+        throw Exception(errorBody['error'] ??
+            'Failed to fetch chat items: ${response.statusCode}');
       }
 
       final jsonResponse = jsonDecode(response.body);

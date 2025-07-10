@@ -8,7 +8,7 @@ abstract class ChatRepository {
 
   ChatRepository(this.chatApiService);
 
-  Stream<ChatMessage> streamChat({
+  Future<ChatMessage> sendChat({
     required ChatRequest request,
   });
 
@@ -24,10 +24,10 @@ class ChatRepositoryImpl implements ChatRepository {
   ChatRepositoryImpl({required this.chatApiService});
 
   @override
-  Stream<ChatMessage> streamChat({
+  Future<ChatMessage> sendChat({
     required ChatRequest request,
   }) {
-    return chatApiService.streamChat(request);
+    return chatApiService.sendChat(request);
   }
 
   @override

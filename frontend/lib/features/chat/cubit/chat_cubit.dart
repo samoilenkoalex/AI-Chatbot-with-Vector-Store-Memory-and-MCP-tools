@@ -80,15 +80,14 @@ class ChatCubit extends Cubit<ChatState> {
         chatName: chatName,
       );
 
-      await for (final response in repository.streamChat(request: request)) {
-        log('Received response: $response');
-        final messages = List<ChatMessage>.from(state.messages)..add(response);
+      final response = await repository.sendChat(request: request);
+      log('Received response: $response');
+      final messages = List<ChatMessage>.from(state.messages)..add(response);
 
-        emit(state.copyWithMessages(
-          messages: messages,
-          chatHistoryStatus: ChatStatus.success,
-        ));
-      }
+      emit(state.copyWithMessages(
+        messages: messages,
+        chatHistoryStatus: ChatStatus.success,
+      ));
 
       // Only reload chat items if it's a new chat or the chat name is being set
       if (chatId == null || chatName != null) {
