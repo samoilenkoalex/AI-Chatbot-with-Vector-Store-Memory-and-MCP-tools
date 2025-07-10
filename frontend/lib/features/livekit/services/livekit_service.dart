@@ -10,6 +10,8 @@ import '../models/livekit_response.dart';
 import '../models/record_message_request.dart';
 import '../models/record_message_response.dart';
 
+const String url = '$baseUrl/api/livekit';
+
 class LiveKitService {
   lk.Room? _room;
   bool _isMuted = false;
@@ -23,7 +25,6 @@ class LiveKitService {
   bool get isMuted => _isMuted;
 
   lk.Room? get room => _room;
-  static const String url = '$baseUrl/api/livekit';
 
   void setOnMuteStateChanged(void Function(bool isMuted)? callback) {
     onMuteStateChanged = callback;
@@ -91,7 +92,6 @@ class LiveKitService {
 
   Future<void> toggleMicrophone() async {
     try {
-
       if (_room?.localParticipant == null) {
         log('ERROR: localParticipant is null!');
         return;
@@ -107,7 +107,6 @@ class LiveKitService {
 
       _isMuted = currentEnabled; // If it was enabled, now it's muted
       log('Updated _isMuted to: $_isMuted');
-
     } catch (error) {
       log('ERROR toggling microphone: $error');
       rethrow;
