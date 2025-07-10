@@ -16,6 +16,10 @@ import * as silero from '@livekit/agents-plugin-silero';
 import { fileURLToPath } from 'node:url';
 import 'dotenv/config';
 import { ensureQdrantCollection } from './services/qdrant_service.js';
+import { z } from 'zod';
+import { TavilyMCPClient } from './clients/tavily_mcp_client.js';
+import { FirecrawlMCPClient } from './clients/firecrawl_mcp_client.js';
+import { getChatItems } from './services/qdrant_service.js';
 
 import { createMemoryContextPrompt } from './config/prompts.js';
 import { memoryService } from './services/memory_service.js';

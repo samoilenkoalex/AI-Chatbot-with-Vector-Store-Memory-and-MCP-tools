@@ -21,7 +21,8 @@ export class TavilyMCPClient {
     constructor(
         private query: string,
         private userId?: string,
-        private chatId?: string
+        private chatId?: string,
+        private chatHistory?: string
     ) {}
 
     async search(): Promise<any> {
@@ -168,6 +169,12 @@ export class TavilyMCPClient {
         const optimizedQuery = this.optimizeQuery(this.query);
         const searchTopic = this.detectSearchTopic(this.query);
 
+        // Create enhanced query with mem0_response context
+        let enhancedQuery = optimizedQuery;
+        if (this.chatHistory && this.chatHistory.length > 0) {
+            enhancedQuery = `${optimizedQuery}\n\nUser context: ${this.chatHistory}`;
+        }
+
         const searchRequest: JsonRpcRequest = {
             jsonrpc: '2.0',
             id: 1,
@@ -175,7 +182,7 @@ export class TavilyMCPClient {
             params: {
                 name: 'tavily-search',
                 arguments: {
-                    query: optimizedQuery,
+                    query: enhancedQuery,
                     search_depth: 'basic',
                     include_answer: true,
                     include_raw_content: false,
@@ -185,11 +192,6 @@ export class TavilyMCPClient {
                 },
             },
         };
-
-        console.log(
-            'Sending search request:',
-            JSON.stringify(searchRequest, null, 2)
-        );
         this.server.stdin?.write(JSON.stringify(searchRequest) + '\n');
     }
 

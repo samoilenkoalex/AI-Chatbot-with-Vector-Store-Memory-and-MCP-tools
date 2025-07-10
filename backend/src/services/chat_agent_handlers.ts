@@ -34,7 +34,13 @@ export async function searchMemories(state: any) {
         state.question.toLowerCase().includes('latest') ||
         state.question.toLowerCase().includes('recent');
 
-    return {
+    const toolCallArgs = {
+        query: state.question,
+        userId: state.userId || '',
+        chatId: state.chatId || '',
+    };
+
+    const result = {
         memories,
         searchResults: null,
         messages: [
@@ -59,7 +65,7 @@ export async function searchMemories(state: any) {
                     ? [
                           {
                               name: 'tavily_search',
-                              args: { query: state.question },
+                              args: toolCallArgs,
                               id: 'search_call_' + Date.now(),
                               type: 'tool_call',
                           },
@@ -68,6 +74,9 @@ export async function searchMemories(state: any) {
             }),
         ],
     };
+
+    console.log('searchMemories result:', JSON.stringify(result, null, 2));
+    return result;
 }
 
 export async function buildContext(state: any) {

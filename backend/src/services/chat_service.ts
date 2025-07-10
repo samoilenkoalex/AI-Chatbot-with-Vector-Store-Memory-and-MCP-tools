@@ -28,8 +28,14 @@ export class ChatService {
                 response: '',
             };
 
+            console.log(
+                'Initial state:',
+                JSON.stringify(initialState, null, 2)
+            );
+
             // Run the graph
             const result = await this.chatAgent.runGraph(initialState);
+            console.log('Graph result:', JSON.stringify(result, null, 2));
             return { messages: [result.response] };
         } catch (error) {
             console.error('Error in chat service:', error);
