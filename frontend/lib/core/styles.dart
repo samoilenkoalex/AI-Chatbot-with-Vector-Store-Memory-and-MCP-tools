@@ -11,7 +11,7 @@ class AppStyles {
   static const Color textLight = Color(0xFF6B7280);
 
   static const Color formBackground = Color(0xFFF7F7F7);
-  static const Color userMessageBg = Color(0xFF0066FF);
+  static const Color userMessageBg = Color(0xFF6B4EE8);
   static const Color assistantMessageBg = Color(0xFFF7F7F7);
 
   static const Color inputBackground = Color(0xFFF7F7F7);

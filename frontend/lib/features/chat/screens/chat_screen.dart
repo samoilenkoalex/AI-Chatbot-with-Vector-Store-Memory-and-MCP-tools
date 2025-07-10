@@ -5,14 +5,14 @@ import 'package:uuid/uuid.dart';
 
 import '../../../common/snackbars/snackbars.dart';
 import '../../../core/styles.dart';
-import '../../../screens/voice_chat_screen.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
 import '../../livekit/cubit/livekit_cubit.dart';
 import '../../livekit/cubit/livekit_state.dart';
+import '../../livekit/screens/voice_chat_screen.dart';
 import '../cubit/chat_cubit.dart';
 import '../cubit/chat_state.dart';
-import '../utils/chat_helpers.dart' show sendMessage, startVoiceChat;
+import '../utils/chat_helpers.dart';
 import '../widgets/chat_error.dart';
 import '../widgets/chat_input_widget.dart';
 import '../widgets/message_bubble.dart';
@@ -31,7 +31,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   String uniqueId = const Uuid().v4();
@@ -39,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadChat();
   }
 
@@ -59,7 +60,16 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _loadChat();
+    }
   }
 
   @override

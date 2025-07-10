@@ -6,9 +6,8 @@ import '../features/auth/cubit/auth_cubit.dart';
 import '../features/auth/cubit/auth_state.dart';
 import '../features/auth/screens/auth_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
+import '../features/livekit/screens/voice_chat_screen.dart';
 import '../layout/sidebar_layout.dart';
-import '../screens/home_screen.dart';
-import '../screens/voice_chat_screen.dart';
 
 // Route names
 const String homeRoute = '/';
@@ -23,7 +22,7 @@ final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>()
 
 final goRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: homeRoute,
+  initialLocation: newChatRoute,
   redirect: (BuildContext context, GoRouterState state) {
     final authCubit = context.read<AuthCubit>();
     final isAuthenticated = authCubit.state is AuthAuthenticated;
@@ -49,7 +48,7 @@ final goRouter = GoRouter(
         GoRoute(
           path: homeRoute,
           name: 'home',
-          builder: (context, state) => const HomeScreen(),
+          builder: (context, state) => const ChatScreen(),
         ),
         GoRoute(
           path: newChatRoute,
