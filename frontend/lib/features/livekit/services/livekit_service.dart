@@ -16,6 +16,7 @@ class LiveKitService {
   void Function(String text, bool isUser)? onTranscriptionReceived;
   void Function(bool isConnecting)? onConnectionStateChanged;
   void Function(String error)? onError;
+  void Function(bool isMuted)? onMuteStateChanged;
 
   bool get isConnected => _room?.connectionState == lk.ConnectionState.connected;
 
@@ -23,6 +24,10 @@ class LiveKitService {
 
   lk.Room? get room => _room;
   static const String url = '$baseUrl/api/livekit';
+
+  void setOnMuteStateChanged(void Function(bool isMuted)? callback) {
+    onMuteStateChanged = callback;
+  }
 
   Future<void> connectToRoom(String url, String token,
       {void Function(bool isConnecting)? onConnectionStateChanged, void Function(String error)? onError}) async {
@@ -32,6 +37,19 @@ class LiveKitService {
 
     try {
       _room = lk.Room(roomOptions: const lk.RoomOptions(enableVisualizer: true));
+      _room!.events.listen((event) {
+        if (event is lk.TrackMutedEvent) {
+          if (event.participant is lk.LocalParticipant) {
+            _isMuted = true;
+            onMuteStateChanged?.call(true);
+          }
+        } else if (event is lk.TrackUnmutedEvent) {
+          if (event.participant is lk.LocalParticipant) {
+            _isMuted = false;
+            onMuteStateChanged?.call(false);
+          }
+        }
+      });
 
       await _room!.connect(
         url,
@@ -41,8 +59,15 @@ class LiveKitService {
           dynacast: true,
         ),
       );
-      await _room!.localParticipant?.setMicrophoneEnabled(true);
-      _isMuted = false;
+
+      final localParticipant = _room!.localParticipant!;
+
+      await localParticipant.setMicrophoneEnabled(true);
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final actualEnabled = localParticipant.isMicrophoneEnabled();
+
+      _isMuted = !actualEnabled;
     } catch (e) {
       log('Error connecting to room: $e');
       if (onError != null) {
@@ -66,10 +91,25 @@ class LiveKitService {
 
   Future<void> toggleMicrophone() async {
     try {
-      await _room?.localParticipant?.setMicrophoneEnabled(!_isMuted);
-      _isMuted = !_isMuted;
+
+      if (_room?.localParticipant == null) {
+        log('ERROR: localParticipant is null!');
+        return;
+      }
+
+      final localParticipant = _room!.localParticipant!;
+
+      final currentEnabled = localParticipant.isMicrophoneEnabled();
+      log('Current microphone enabled: $currentEnabled');
+
+      await localParticipant.setMicrophoneEnabled(!currentEnabled);
+      log('Set microphone enabled to: ${!currentEnabled}');
+
+      _isMuted = currentEnabled; // If it was enabled, now it's muted
+      log('Updated _isMuted to: $_isMuted');
+
     } catch (error) {
-      log('Error toggling microphone: $error');
+      log('ERROR toggling microphone: $error');
       rethrow;
     }
   }
