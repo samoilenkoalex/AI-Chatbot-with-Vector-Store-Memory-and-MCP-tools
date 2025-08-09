@@ -2,6 +2,25 @@
 
 A sophisticated AI-powered study companion chatbot that leverages advanced AI capabilities with vector store memory retention and Model Context Protocol (MCP) integration. This project combines modern technologies for both backend and frontend to deliver a seamless learning experience with both text and voice chat capabilities.
 
+## Text Chat 
+
+https://github.com/user-attachments/assets/647acc87-2a20-4245-8959-ef824399eede
+
+
+## Tavily MCP  
+
+https://github.com/user-attachments/assets/16d6501f-eca0-44b2-ab77-d87791a9651b
+
+
+## Firecrawl MCP
+
+https://github.com/user-attachments/assets/aa3be5c2-c964-414c-aff0-5e1b75a7d232
+
+
+## Voice Mode
+
+https://github.com/user-attachments/assets/8c47e61d-8eee-48d5-afe0-2fe3cb03f169
+
 ## 🚀 Features
 
 -   **Chat Interface**: Interactive text-based conversation with AI study assistant
