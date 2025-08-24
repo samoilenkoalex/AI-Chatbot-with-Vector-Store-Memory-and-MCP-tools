@@ -211,12 +211,7 @@ https://github.com/user-attachments/assets/8c47e61d-8eee-48d5-afe0-2fe3cb03f169
 -   `POST /api/livekit//record_message` - Record transcript message
 
 
-## 📝 License
-
-This project is licensed under the BSD-3-Clause license License - see the [LICENSE](https://github.com/extrawest/AI-Healthcare-Bot-with-Memory/blob/main/LICENSE.txt) file for details.
-
 ## 👥 Authors
 
-Created by Oleksandr Samoilenko  
-[Extrawest.com](https://extrawest.com), 2025
+Created by Oleksandr Samoilenko, 2025
 
