@@ -1,5 +1,6 @@
 # AI Chatbot with Vector Store, Memory and MCP tools
 
+
 A sophisticated AI-powered study companion chatbot that leverages advanced AI capabilities with vector store memory retention and Model Context Protocol (MCP) integration. This project combines modern technologies for both backend and frontend to deliver a seamless learning experience with both text and voice chat capabilities.
 
 ## Text Chat 
